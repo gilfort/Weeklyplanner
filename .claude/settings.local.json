@@ -1,0 +1,31 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(flutter create:*)",
+      "Bash(where flutter:*)",
+      "Read(//c/Users/jangi/flutter/bin/**)",
+      "Read(//c/Users/jangi/OneDrive/Programming/Weeklyplanner/$LOCALAPPDATA/flutter/bin/**)",
+      "Bash(echo $PATH)",
+      "Bash(cmd.exe /c \"where flutter\")",
+      "Read(//c/src/flutter/bin/**)",
+      "Read(//d/flutter/bin/**)",
+      "Read(//c/Users/jangi/OneDrive/Programming/Weeklyplanner/$HOME/flutter/bin/**)",
+      "Read(//c/flutter/bin/**)",
+      "Read(//c//**)",
+      "Bash(grep -v \"^$\")",
+      "Bash(find /c/Users/jangi -maxdepth 5 -name flutter -path */bin/* -type f)",
+      "Bash(export PATH=\"/c/Users/jangi/OneDrive/Programming/flutter/bin:$PATH\")",
+      "Bash(flutter pub:*)",
+      "Bash(flutter analyze:*)",
+      "Bash(flutter test:*)",
+      "Bash(dart run:*)",
+      "Bash(taskkill //F //IM \"dart.exe\")",
+      "Bash(flutter clean:*)",
+      "mcp__plugin_context-mode_context-mode__ctx_batch_execute",
+      "mcp__plugin_context-mode_context-mode__ctx_execute",
+      "mcp__plugin_context-mode_context-mode__ctx_search",
+      "Bash(/c/Users/jangi/OneDrive/Programming/Weeklyplanner/meal_planner/STORAGE_ANALYSIS.md:*)",
+      "mcp__plugin_context-mode_context-mode__ctx_execute_file"
+    ]
+  }
+}
