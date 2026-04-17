@@ -13,7 +13,7 @@ class Recipes extends _$Recipes {
 
   @override
   Future<List<Recipe>> build() async {
-    _repo = ref.watch(recipeRepositoryProvider);
+    _repo = await ref.watch(recipeRepositoryProvider.future);
     return _repo.readAll();
   }
 

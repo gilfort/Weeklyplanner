@@ -11,6 +11,7 @@ abstract class GeneralItem with _$GeneralItem {
     @Default(1.0) double amount,
     @Default('') String unit,
     @Default('') String category,
+    @Default(false) bool excludedThisTrip,
   }) = _GeneralItem;
 
   factory GeneralItem.fromJson(Map<String, dynamic> json) =>

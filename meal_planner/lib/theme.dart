@@ -8,8 +8,8 @@ class PaperTheme {
   // ── Colours ──────────────────────────────────────────────────────────
   static const Color ink = Color(0xFF1A3A5C); // dark blue ink
   static const Color inkLight = Color(0xFF4A7DAD); // lighter accent
-  static const Color paper = Color(0xFFF5F0E8); // warm cream paper
-  static const Color paperDark = Color(0xFFEDE7DA); // slightly darker
+  static const Color paper = Color(0xFFEAF4FF); // light blue-white
+  static const Color paperDark = Color(0xFFD6EAFF); // slightly darker blue
   static const Color ruled = Color(0xFFCDD8E4); // blue ruled lines
   static const Color ruledLight = Color(0xFFDDE6EF);
   static const Color margin = Color(0xFFE8A0A0); // red margin line
@@ -189,7 +189,7 @@ class PaperTheme {
   }
 }
 
-/// A widget that paints horizontal ruled lines (like notebook paper).
+/// A widget that paints a light-blue to white gradient background.
 class RuledPaperBackground extends StatelessWidget {
   final Widget child;
   final double lineSpacing;
@@ -204,56 +204,18 @@ class RuledPaperBackground extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CustomPaint(
-      painter: _RuledPaperPainter(
-        lineSpacing: lineSpacing,
-        lineColor: PaperTheme.ruled,
-        marginColor: PaperTheme.margin,
-        showMargin: showMargin,
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Color(0xFFD6EAFF), // light blue
+            Color(0xFFFFFFFF), // white
+          ],
+        ),
       ),
       child: child,
     );
   }
-}
-
-class _RuledPaperPainter extends CustomPainter {
-  final double lineSpacing;
-  final Color lineColor;
-  final Color marginColor;
-  final bool showMargin;
-
-  _RuledPaperPainter({
-    required this.lineSpacing,
-    required this.lineColor,
-    required this.marginColor,
-    required this.showMargin,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final linePaint = Paint()
-      ..color = lineColor
-      ..strokeWidth = 0.5;
-
-    for (double y = lineSpacing; y < size.height; y += lineSpacing) {
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), linePaint);
-    }
-
-    if (showMargin) {
-      final marginPaint = Paint()
-        ..color = marginColor
-        ..strokeWidth = 1.0;
-      canvas.drawLine(
-        const Offset(48, 0),
-        Offset(48, size.height),
-        marginPaint,
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _RuledPaperPainter old) =>
-      lineSpacing != old.lineSpacing ||
-      lineColor != old.lineColor ||
-      showMargin != old.showMargin;
 }

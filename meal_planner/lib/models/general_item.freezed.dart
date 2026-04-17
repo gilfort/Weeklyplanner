@@ -26,6 +26,7 @@ mixin _$GeneralItem {
   double get amount => throw _privateConstructorUsedError;
   String get unit => throw _privateConstructorUsedError;
   String get category => throw _privateConstructorUsedError;
+  bool get excludedThisTrip => throw _privateConstructorUsedError;
 
   /// Serializes this GeneralItem to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -50,6 +51,7 @@ abstract class $GeneralItemCopyWith<$Res> {
     double amount,
     String unit,
     String category,
+    bool excludedThisTrip,
   });
 }
 
@@ -73,6 +75,7 @@ class _$GeneralItemCopyWithImpl<$Res, $Val extends GeneralItem>
     Object? amount = null,
     Object? unit = null,
     Object? category = null,
+    Object? excludedThisTrip = null,
   }) {
     return _then(
       _value.copyWith(
@@ -96,6 +99,10 @@ class _$GeneralItemCopyWithImpl<$Res, $Val extends GeneralItem>
                 ? _value.category
                 : category // ignore: cast_nullable_to_non_nullable
                       as String,
+            excludedThisTrip: null == excludedThisTrip
+                ? _value.excludedThisTrip
+                : excludedThisTrip // ignore: cast_nullable_to_non_nullable
+                      as bool,
           )
           as $Val,
     );
@@ -117,6 +124,7 @@ abstract class _$$GeneralItemImplCopyWith<$Res>
     double amount,
     String unit,
     String category,
+    bool excludedThisTrip,
   });
 }
 
@@ -139,6 +147,7 @@ class __$$GeneralItemImplCopyWithImpl<$Res>
     Object? amount = null,
     Object? unit = null,
     Object? category = null,
+    Object? excludedThisTrip = null,
   }) {
     return _then(
       _$GeneralItemImpl(
@@ -162,6 +171,10 @@ class __$$GeneralItemImplCopyWithImpl<$Res>
             ? _value.category
             : category // ignore: cast_nullable_to_non_nullable
                   as String,
+        excludedThisTrip: null == excludedThisTrip
+            ? _value.excludedThisTrip
+            : excludedThisTrip // ignore: cast_nullable_to_non_nullable
+                  as bool,
       ),
     );
   }
@@ -176,6 +189,7 @@ class _$GeneralItemImpl implements _GeneralItem {
     this.amount = 1.0,
     this.unit = '',
     this.category = '',
+    this.excludedThisTrip = false,
   });
 
   factory _$GeneralItemImpl.fromJson(Map<String, dynamic> json) =>
@@ -194,10 +208,13 @@ class _$GeneralItemImpl implements _GeneralItem {
   @override
   @JsonKey()
   final String category;
+  @override
+  @JsonKey()
+  final bool excludedThisTrip;
 
   @override
   String toString() {
-    return 'GeneralItem(id: $id, name: $name, amount: $amount, unit: $unit, category: $category)';
+    return 'GeneralItem(id: $id, name: $name, amount: $amount, unit: $unit, category: $category, excludedThisTrip: $excludedThisTrip)';
   }
 
   @override
@@ -210,13 +227,22 @@ class _$GeneralItemImpl implements _GeneralItem {
             (identical(other.amount, amount) || other.amount == amount) &&
             (identical(other.unit, unit) || other.unit == unit) &&
             (identical(other.category, category) ||
-                other.category == category));
+                other.category == category) &&
+            (identical(other.excludedThisTrip, excludedThisTrip) ||
+                other.excludedThisTrip == excludedThisTrip));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode =>
-      Object.hash(runtimeType, id, name, amount, unit, category);
+  int get hashCode => Object.hash(
+    runtimeType,
+    id,
+    name,
+    amount,
+    unit,
+    category,
+    excludedThisTrip,
+  );
 
   /// Create a copy of GeneralItem
   /// with the given fields replaced by the non-null parameter values.
@@ -239,6 +265,7 @@ abstract class _GeneralItem implements GeneralItem {
     final double amount,
     final String unit,
     final String category,
+    final bool excludedThisTrip,
   }) = _$GeneralItemImpl;
 
   factory _GeneralItem.fromJson(Map<String, dynamic> json) =
@@ -254,6 +281,8 @@ abstract class _GeneralItem implements GeneralItem {
   String get unit;
   @override
   String get category;
+  @override
+  bool get excludedThisTrip;
 
   /// Create a copy of GeneralItem
   /// with the given fields replaced by the non-null parameter values.

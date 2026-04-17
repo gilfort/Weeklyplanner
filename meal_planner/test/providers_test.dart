@@ -51,10 +51,11 @@ void main() {
 
     final container = ProviderContainer(
       overrides: [
-        recipeRepositoryProvider.overrideWithValue(recipeRepo),
-        weekPlanRepositoryProvider.overrideWithValue(weekPlanRepo),
-        generalItemRepositoryProvider.overrideWithValue(generalRepo),
-        shoppingStateRepositoryProvider.overrideWithValue(shoppingRepo),
+        recipeRepositoryProvider.overrideWith((ref) async => recipeRepo),
+        weekPlanRepositoryProvider.overrideWith((ref) async => weekPlanRepo),
+        generalItemRepositoryProvider.overrideWith((ref) async => generalRepo),
+        shoppingStateRepositoryProvider
+            .overrideWith((ref) async => shoppingRepo),
       ],
     );
 

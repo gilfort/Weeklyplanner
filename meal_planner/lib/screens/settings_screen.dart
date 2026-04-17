@@ -5,10 +5,12 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:permission_handler/permission_handler.dart';
-
-import '../providers/storage_path_provider.dart';
+import '../providers/repository_providers.dart';
+import '../providers/storage_config_provider.dart';
+import '../repositories/saf_storage_backend.dart';
 import '../theme.dart';
+import '../widgets/sync_status_icon.dart';
+import '../widgets/webdav_config_form.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -31,12 +33,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Populate controller once the async value arrives.
-    final pathAsync = ref.watch(storagePathProvider);
+    final configAsync = ref.watch(storageConfigNotifierProvider);
     if (!_initialized) {
-      pathAsync.whenData((value) {
+      configAsync.whenData((config) {
         if (!_initialized) {
-          _pathCtrl.text = value ?? '';
+          _pathCtrl.text = config.path ?? '';
           _initialized = true;
         }
       });
@@ -49,81 +50,44 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
+        actions: const [SyncStatusIcon()],
       ),
       body: RuledPaperBackground(
         child: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Text(
-            'Speicherort',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 4),
-          if (kIsWeb) ...[
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Icon(Icons.info_outline, size: 20,
-                    color: Theme.of(context).colorScheme.outline),
-                const SizedBox(width: 8),
-                const Expanded(
-                  child: Text(
-                    'Im Browser werden Daten im lokalen Speicher '
-                    '(localStorage) abgelegt. Ein eigener Ordnerpfad '
-                    'ist nur in der nativen App (Android/Windows/Linux) '
-                    'möglich.',
-                  ),
-                ),
-              ],
-            ),
-          ] else ...[
+          padding: const EdgeInsets.all(16),
+          children: [
             Text(
-              'Wähle einen Ordner oder gib den Pfad manuell ein. '
-              'Leer lassen für den Standard-App-Ordner.',
-              style: Theme.of(context).textTheme.bodySmall,
+              'Speicherort',
+              style: Theme.of(context).textTheme.titleMedium,
             ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _pathCtrl,
-              enabled: _initialized,
-              decoration: InputDecoration(
-                labelText: 'Ordnerpfad',
-                hintText: '(Standard-App-Ordner)',
-                suffixIcon: !_initialized
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: Padding(
-                          padding: EdgeInsets.all(12),
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
-                      )
-                    : IconButton(
-                        icon: const Icon(Icons.folder_open),
-                        tooltip: 'Ordner auswählen',
-                        onPressed: _pickFolder,
-                      ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: FilledButton.icon(
-                    onPressed: _save,
-                    icon: const Icon(Icons.save),
-                    label: const Text('Speichern'),
-                  ),
-                ),
-                if (_pathCtrl.text.isNotEmpty) ...[
-                  const SizedBox(width: 12),
-                  OutlinedButton(
-                    onPressed: _resetToDefault,
-                    child: const Text('Zurücksetzen'),
+            const SizedBox(height: 4),
+            if (kIsWeb) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Icon(Icons.info_outline,
+                      size: 20,
+                      color: Theme.of(context).colorScheme.outline),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                      'Im Browser werden Daten im lokalen Speicher '
+                      '(localStorage) abgelegt. Ein eigener Ordnerpfad '
+                      'ist nur in der nativen App (Android/Windows/Linux) '
+                      'möglich.',
+                    ),
                   ),
                 ],
-              ],
-            ),
+              ),
+            ] else if (!kIsWeb && Platform.isAndroid) ...[
+              _buildAndroidStorageSection(configAsync.valueOrNull),
+              const SizedBox(height: 24),
+              _buildWebDavStorageSection(configAsync.valueOrNull),
+            ] else ...[
+              _buildDesktopStorageSection(),
+              const SizedBox(height: 24),
+              _buildWebDavStorageSection(configAsync.valueOrNull),
+            ],
             if (_error != null)
               Padding(
                 padding: const EdgeInsets.only(top: 12),
@@ -148,54 +112,249 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'Pfad gespeichert. Alle Daten werden nun aus dem '
-                        'neuen Ordner geladen.',
+                        'Gespeichert. Daten werden nun aus dem neuen Ordner geladen.',
                       ),
                     ),
                   ],
                 ),
               ),
           ],
-          const SizedBox(height: 32),
-          const Divider(),
-          const SizedBox(height: 12),
-          Text(
-            'Syncthing-Einrichtung',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 8),
-          const _SyncthingGuide(),
-        ],
-      ),
+        ),
       ),
     );
   }
 
-  Future<void> _pickFolder() async {
-    // On Android, request permission first so the picker can access storage.
-    if (Platform.isAndroid) {
-      final status = await Permission.manageExternalStorage.request();
-      if (!status.isGranted) {
+  Widget _buildAndroidStorageSection(StorageConfig? current) {
+    final isSaf = current?.type == StorageType.saf;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          isSaf
+              ? 'Aktuell: Cloud-Ordner (${current!.safUri})'
+              : 'Aktuell: Lokaler App-Ordner (Standard)',
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+        const SizedBox(height: 12),
+        FilledButton.icon(
+          onPressed: () => _changeSafFolder(current),
+          icon: const Icon(Icons.cloud_outlined),
+          label: const Text('Cloud-Ordner wählen'),
+        ),
+        const SizedBox(height: 8),
+        if (isSaf)
+          OutlinedButton(
+            onPressed: () => _confirmAndSetConfig(
+              const StorageConfig(type: StorageType.local),
+            ),
+            child: const Text('Auf lokalen Speicher wechseln'),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildWebDavStorageSection(StorageConfig? current) {
+    final isWebDav = current?.type == StorageType.webdav;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'WebDAV',
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: 4),
+        if (isWebDav)
+          Text(
+            'Aktuell: ${current!.webdavUrl} (${current.webdavUsername})',
+            style: Theme.of(context).textTheme.bodySmall,
+          )
+        else
+          Text(
+            'OneDrive, Nextcloud oder selbst gehosteten WebDAV-Server '
+            'verbinden.',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        const SizedBox(height: 12),
+        FilledButton.icon(
+          onPressed: () => _configureWebDav(current),
+          icon: const Icon(Icons.cloud_sync_outlined),
+          label: Text(isWebDav ? 'WebDAV bearbeiten' : 'WebDAV einrichten'),
+        ),
+        if (isWebDav) ...[
+          const SizedBox(height: 8),
+          OutlinedButton(
+            onPressed: () => _switchAwayFromWebDav(current!),
+            child: const Text('Auf lokalen Speicher wechseln'),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Future<void> _configureWebDav(StorageConfig? current) async {
+    setState(() {
+      _error = null;
+      _saved = false;
+    });
+    final isEditing = current?.type == StorageType.webdav;
+    final initialPassword = isEditing
+        ? await ref
+            .read(webdavCredentialsServiceProvider)
+            .read(current!)
+        : null;
+    if (!mounted) return;
+    final result = await showModalBottomSheet<WebDavFormResult>(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(ctx).viewInsets.bottom,
+        ),
+        child: WebDavConfigForm(
+          initial: isEditing ? current : null,
+          initialPassword: initialPassword,
+          submitLabel: 'Speichern',
+          onSubmit: (r) => Navigator.of(ctx).pop(r),
+        ),
+      ),
+    );
+    if (result == null || !mounted) return;
+
+    final confirmed = isEditing ? true : await _showChangeWarningDialog();
+    if (!confirmed) return;
+
+    final svc = ref.read(webdavCredentialsServiceProvider);
+    // Old credential cleanup if URL/username changed.
+    if (isEditing &&
+        (current!.webdavUrl != result.config.webdavUrl ||
+            current.webdavUsername != result.config.webdavUsername)) {
+      await svc.delete(current);
+    }
+    await svc.save(result.config, result.password);
+    await _setConfig(result.config);
+  }
+
+  Future<void> _switchAwayFromWebDav(StorageConfig oldConfig) async {
+    final confirmed = await _showChangeWarningDialog();
+    if (!confirmed) return;
+    await ref.read(webdavCredentialsServiceProvider).delete(oldConfig);
+    await _setConfig(const StorageConfig(type: StorageType.local));
+  }
+
+  Widget _buildDesktopStorageSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Wähle einen Ordner oder gib den Pfad manuell ein. '
+          'Leer lassen für den Standard-App-Ordner.',
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+        const SizedBox(height: 12),
+        TextFormField(
+          controller: _pathCtrl,
+          enabled: _initialized,
+          decoration: InputDecoration(
+            labelText: 'Ordnerpfad',
+            hintText: '(Standard-App-Ordner)',
+            suffixIcon: !_initialized
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: Padding(
+                      padding: EdgeInsets.all(12),
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  )
+                : IconButton(
+                    icon: const Icon(Icons.folder_open),
+                    tooltip: 'Ordner auswählen',
+                    onPressed: _pickDesktopFolder,
+                  ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+              child: FilledButton.icon(
+                onPressed: _saveDesktopPath,
+                icon: const Icon(Icons.save),
+                label: const Text('Speichern'),
+              ),
+            ),
+            if (_pathCtrl.text.isNotEmpty) ...[
+              const SizedBox(width: 12),
+              OutlinedButton(
+                onPressed: _resetToDefault,
+                child: const Text('Zurücksetzen'),
+              ),
+            ],
+          ],
+        ),
+      ],
+    );
+  }
+
+  Future<void> _changeSafFolder(StorageConfig? current) async {
+    setState(() => _error = null);
+    final confirmed = await _showChangeWarningDialog();
+    if (!confirmed) return;
+
+    try {
+      final uri = await SafStorageBackend.openDocumentTree();
+      if (uri != null && mounted) {
+        await _setConfig(StorageConfig(
+          type: StorageType.saf,
+          safUri: uri,
+        ));
+      }
+    } catch (e) {
+      if (mounted) setState(() => _error = 'Ordner konnte nicht geöffnet werden: $e');
+    }
+  }
+
+  Future<void> _pickDesktopFolder() async {
+    setState(() => _error = null);
+    final result = await FilePicker.platform.getDirectoryPath(
+      dialogTitle: 'Speicherordner auswählen',
+    );
+    if (result != null && mounted) {
+      setState(() {
+        _pathCtrl.text = result;
+        _saved = false;
+      });
+    }
+  }
+
+  Future<void> _saveDesktopPath() async {
+    final path = _pathCtrl.text.trim();
+    setState(() {
+      _error = null;
+      _saved = false;
+    });
+
+    if (path.isNotEmpty) {
+      final confirmed = await _showChangeWarningDialog();
+      if (!confirmed) return;
+
+      try {
+        final dir = Directory(path);
+        if (!await dir.exists()) await dir.create(recursive: true);
+        final testFile = File('${dir.path}/.meal_planner_test');
+        await testFile.writeAsString('ok');
+        await testFile.delete();
+      } catch (e) {
         if (mounted) {
-          setState(() => _error =
-              'Speicherberechtigung wurde verweigert. '
-              'Bitte in den Android-Einstellungen erlauben.');
+          setState(() => _error = 'Ordner konnte nicht erstellt/beschrieben werden: $e');
         }
         return;
       }
     }
 
-    final result = await FilePicker.platform.getDirectoryPath(
-      dialogTitle: 'Speicherordner auswählen',
-    );
-
-    if (result != null && mounted) {
-      setState(() {
-        _pathCtrl.text = result;
-        _error = null;
-        _saved = false;
-      });
-    }
+    await _setConfig(path.isEmpty
+        ? const StorageConfig(type: StorageType.local)
+        : StorageConfig(type: StorageType.filesystem, path: path));
   }
 
   Future<void> _resetToDefault() async {
@@ -204,99 +363,43 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       _error = null;
       _saved = false;
     });
-    await ref.read(storagePathProvider.notifier).setPath(null);
+    await _setConfig(const StorageConfig(type: StorageType.local));
+  }
+
+  Future<void> _confirmAndSetConfig(StorageConfig config) async {
+    final confirmed = await _showChangeWarningDialog();
+    if (!confirmed) return;
+    await _setConfig(config);
+  }
+
+  Future<void> _setConfig(StorageConfig config) async {
+    await ref.read(storageConfigNotifierProvider.notifier).setConfig(config);
     if (mounted) setState(() => _saved = true);
   }
 
-  Future<void> _save() async {
-    final path = _pathCtrl.text.trim();
-    setState(() {
-      _error = null;
-      _saved = false;
-    });
-
-    // Validate and create directory if a custom path is set (native only).
-    if (path.isNotEmpty && !kIsWeb) {
-      // On Android, request storage permission for external paths.
-      if (Platform.isAndroid) {
-        final status = await Permission.manageExternalStorage.request();
-        if (!status.isGranted) {
-          if (mounted) {
-            setState(() => _error =
-                'Speicherberechtigung wurde verweigert. '
-                'Bitte in den Android-Einstellungen erlauben.');
-          }
-          return;
-        }
-      }
-
-      try {
-        final dir = Directory(path);
-        if (!await dir.exists()) {
-          await dir.create(recursive: true);
-        }
-        // Quick write-test to verify we actually have access.
-        final testFile = File('${dir.path}/.meal_planner_test');
-        await testFile.writeAsString('ok');
-        await testFile.delete();
-      } catch (e) {
-        if (mounted) {
-          setState(() => _error = 'Ordner konnte nicht erstellt/beschrieben '
-              'werden: $e');
-        }
-        return;
-      }
-    }
-
-    await ref.read(storagePathProvider.notifier).setPath(
-          path.isEmpty ? null : path,
-        );
-    if (mounted) setState(() => _saved = true);
-  }
-}
-
-class _SyncthingGuide extends StatelessWidget {
-  const _SyncthingGuide();
-
-  @override
-  Widget build(BuildContext context) {
-    final steps = [
-      'Syncthing auf beiden Geräten installieren (F-Droid oder Play Store).',
-      'Geräte koppeln: Einstellungen → Gerät hinzufügen → QR-Code scannen.',
-      'Auf Gerät A einen Ordner anlegen, z.\u202fB. /storage/emulated/0/MealPlanner.',
-      'Ordner in Syncthing freigeben: Ordner hinzufügen → Pfad eingeben → '
-          'mit Gerät B teilen.',
-      'Auf Gerät B den freigegebenen Ordner annehmen und denselben Pfad wählen.',
-      'In dieser App unter Einstellungen den Ordnerpfad auf beiden Geräten '
-          'auf denselben Syncthing-Ordner setzen.',
-      'Konfliktstrategie: Syncthing erstellt bei Konflikten '
-          '.sync-conflict-Dateien. Die App nutzt immer die neueste '
-          'Hauptdatei — Konflikte manuell prüfen.',
-    ];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        for (var i = 0; i < steps.length; i++)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SizedBox(
-                  width: 24,
-                  child: Text(
-                    '${i + 1}.',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                  ),
-                ),
-                Expanded(child: Text(steps[i])),
-              ],
-            ),
+  /// Shows a dialog warning the user that data won't be copied.
+  /// Returns true if the user confirms.
+  Future<bool> _showChangeWarningDialog() async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Speicherort wechseln?'),
+        content: const Text(
+          'Daten im alten Ordner bleiben erhalten, werden aber nicht in den '
+          'neuen Ordner kopiert. Die App lädt Daten aus dem neuen Ordner.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Abbrechen'),
           ),
-      ],
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Wechseln'),
+          ),
+        ],
+      ),
     );
+    return result ?? false;
   }
 }

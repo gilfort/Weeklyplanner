@@ -11,6 +11,7 @@ import '../providers/ingredient_catalog_provider.dart';
 import '../providers/shopping_items_provider.dart';
 import '../providers/unit_provider.dart';
 import '../theme.dart';
+import '../widgets/sync_status_icon.dart';
 
 const _uuid = Uuid();
 
@@ -25,6 +26,7 @@ class ShoppingListScreen extends ConsumerWidget {
         appBar: AppBar(
           title: const Text('Einkaufsliste'),
           actions: [
+            const SyncStatusIcon(),
             IconButton(
               icon: const Icon(Icons.settings),
               onPressed: () => context.push('/settings'),
@@ -172,6 +174,7 @@ class _WeeklyShoppingTab extends ConsumerWidget {
                             '${item.name.toLowerCase()}|${item.unit.toLowerCase()}',
                           ),
                           isUnavailable: false,
+                          onEdit: () => _editShoppingItem(context, ref, item),
                         ),
                     ],
                     // Unavailable section at bottom
@@ -187,6 +190,7 @@ class _WeeklyShoppingTab extends ConsumerWidget {
                             '${item.name.toLowerCase()}|${item.unit.toLowerCase()}',
                           ),
                           isUnavailable: true,
+                          onEdit: () => _editShoppingItem(context, ref, item),
                         ),
                     ],
                   ],
@@ -210,6 +214,20 @@ class _WeeklyShoppingTab extends ConsumerWidget {
     );
   }
 
+  Future<void> _editShoppingItem(
+    BuildContext context,
+    WidgetRef ref,
+    ShoppingItem item,
+  ) async {
+    final result = await showDialog<ShoppingItem>(
+      context: context,
+      builder: (_) => _ShoppingItemEditDialog(item: item),
+    );
+    if (result != null) {
+      await ref.read(shoppingItemsProvider.notifier).upsert(result);
+    }
+  }
+
   Future<void> _finishShopping(BuildContext context, WidgetRef ref) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -231,6 +249,7 @@ class _WeeklyShoppingTab extends ConsumerWidget {
     );
     if (confirmed == true) {
       await ref.read(shoppingItemsProvider.notifier).clearAll();
+      await ref.read(generalItemsProvider.notifier).resetExclusions();
     }
   }
 }
@@ -264,11 +283,13 @@ class _ShoppingItemTile extends ConsumerWidget {
   final ShoppingItem item;
   final bool isChecked;
   final bool isUnavailable;
+  final VoidCallback? onEdit;
 
   const _ShoppingItemTile({
     required this.item,
     required this.isChecked,
     this.isUnavailable = false,
+    this.onEdit,
   });
 
   @override
@@ -305,7 +326,7 @@ class _ShoppingItemTile extends ConsumerWidget {
               overflow: TextOverflow.ellipsis,
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 4),
           // Unavailable checkbox
           Tooltip(
             message: isUnavailable ? 'Wieder verfügbar' : 'Nicht verfügbar',
@@ -315,7 +336,7 @@ class _ShoppingItemTile extends ConsumerWidget {
               child: Checkbox(
                 value: isUnavailable,
                 onChanged: (_) => _toggleUnavailable(ref),
-                side: BorderSide(
+                side: const BorderSide(
                   color: Color.fromARGB(153, 0xC0, 0x39, 0x2B),
                   width: 1.5,
                 ),
@@ -328,8 +349,21 @@ class _ShoppingItemTile extends ConsumerWidget {
               ),
             ),
           ),
+          // Edit button (Change #6)
+          if (onEdit != null)
+            SizedBox(
+              width: 32,
+              height: 32,
+              child: IconButton(
+                icon: const Icon(Icons.edit_outlined, size: 16),
+                padding: EdgeInsets.zero,
+                visualDensity: VisualDensity.compact,
+                onPressed: onEdit,
+                tooltip: 'Bearbeiten',
+              ),
+            ),
           // Extra space for future options
-          const SizedBox(width: 16),
+          const SizedBox(width: 8),
         ],
       ),
     );
@@ -538,6 +572,8 @@ class _GeneralItemTile extends ConsumerWidget {
         ? item.amount.toInt().toString()
         : item.amount.toStringAsFixed(1);
 
+    final isExcluded = item.excludedThisTrip;
+
     return Dismissible(
       key: ValueKey(item.id),
       direction: DismissDirection.endToStart,
@@ -550,35 +586,73 @@ class _GeneralItemTile extends ConsumerWidget {
       onDismissed: (_) =>
           ref.read(generalItemsProvider.notifier).delete(item.id),
       child: ListTile(
-        title: Text(item.name),
+        title: Text(
+          item.name,
+          style: isExcluded
+              ? TextStyle(
+                  decoration: TextDecoration.lineThrough,
+                  color: PaperTheme.checked,
+                )
+              : null,
+        ),
         subtitle: Text('$amountStr ${item.unit}'.trim()),
-        trailing: item.category.isNotEmpty
-            ? Chip(
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (item.category.isNotEmpty) ...[
+              Chip(
                 label: Text(item.category),
                 visualDensity: VisualDensity.compact,
                 padding: EdgeInsets.zero,
                 labelPadding: const EdgeInsets.symmetric(horizontal: 6),
-              )
-            : null,
+              ),
+              const SizedBox(width: 4),
+            ],
+            Tooltip(
+              message: isExcluded
+                  ? 'Wieder auf die Liste'
+                  : 'Diesmal ausschließen',
+              child: IconButton(
+                icon: Icon(
+                  isExcluded
+                      ? Icons.remove_shopping_cart
+                      : Icons.remove_shopping_cart_outlined,
+                  color: isExcluded ? PaperTheme.error : PaperTheme.checked,
+                  size: 20,
+                ),
+                visualDensity: VisualDensity.compact,
+                onPressed: () => ref
+                    .read(generalItemsProvider.notifier)
+                    .toggleExcluded(item.id),
+              ),
+            ),
+          ],
+        ),
         onTap: () => _editItem(context, ref),
       ),
     );
   }
 
   Future<void> _editItem(BuildContext context, WidgetRef ref) async {
-    final result = await showDialog<GeneralItem>(
+    final result = await showDialog<dynamic>(
       context: context,
       builder: (_) => _GeneralItemDialog(existing: item),
     );
-    if (result != null) {
-      await ref.read(generalItemsProvider.notifier).upsert(result);
+    GeneralItem? edited;
+    if (result is GeneralItem) {
+      edited = result;
+    } else if (result is (GeneralItem, bool)) {
+      edited = result.$1;
+    }
+    if (edited != null) {
+      await ref.read(generalItemsProvider.notifier).upsert(edited);
       await ref.read(ingredientCatalogProvider.notifier).learnIngredient(
-            name: result.name,
-            unit: result.unit,
-            category: result.category,
+            name: edited.name,
+            unit: edited.unit,
+            category: edited.category,
           );
-      if (result.unit.isNotEmpty) {
-        await ref.read(unitsProvider.notifier).addUnit(result.unit);
+      if (edited.unit.isNotEmpty) {
+        await ref.read(unitsProvider.notifier).addUnit(edited.unit);
       }
     }
   }
@@ -598,20 +672,31 @@ class ShoppingListFab extends ConsumerWidget {
   }
 
   Future<void> _addGeneralItem(BuildContext context, WidgetRef ref) async {
-    final result = await showDialog<GeneralItem>(
-      context: context,
-      builder: (_) => const _GeneralItemDialog(),
-    );
-    if (result != null) {
-      await ref.read(generalItemsProvider.notifier).upsert(result);
-      // Learn into catalog
-      await ref.read(ingredientCatalogProvider.notifier).learnIngredient(
-            name: result.name,
-            unit: result.unit,
-            category: result.category,
-          );
-      if (result.unit.isNotEmpty) {
-        await ref.read(unitsProvider.notifier).addUnit(result.unit);
+    bool keepGoing = true;
+    while (keepGoing) {
+      keepGoing = false;
+      if (!context.mounted) return;
+      final result = await showDialog<dynamic>(
+        context: context,
+        builder: (_) => const _GeneralItemDialog(),
+      );
+      GeneralItem? item;
+      if (result is GeneralItem) {
+        item = result;
+      } else if (result is (GeneralItem, bool)) {
+        item = result.$1;
+        keepGoing = result.$2;
+      }
+      if (item != null) {
+        await ref.read(generalItemsProvider.notifier).upsert(item);
+        await ref.read(ingredientCatalogProvider.notifier).learnIngredient(
+              name: item.name,
+              unit: item.unit,
+              category: item.category,
+            );
+        if (item.unit.isNotEmpty) {
+          await ref.read(unitsProvider.notifier).addUnit(item.unit);
+        }
       }
     }
   }
@@ -621,7 +706,8 @@ class ShoppingListFab extends ConsumerWidget {
 
 class _GeneralItemDialog extends ConsumerStatefulWidget {
   final GeneralItem? existing;
-  const _GeneralItemDialog({this.existing});
+  final bool autoFocusName;
+  const _GeneralItemDialog({this.existing, this.autoFocusName = true});
 
   @override
   ConsumerState<_GeneralItemDialog> createState() =>
@@ -634,6 +720,8 @@ class _GeneralItemDialogState extends ConsumerState<_GeneralItemDialog> {
   late final TextEditingController _amountCtrl;
   late final TextEditingController _unitCtrl;
   late final TextEditingController _categoryCtrl;
+  late final FocusNode _nameFocus;
+  late final FocusNode _amountFocus;
 
   @override
   void initState() {
@@ -644,6 +732,13 @@ class _GeneralItemDialogState extends ConsumerState<_GeneralItemDialog> {
         TextEditingController(text: e != null ? e.amount.toString() : '1');
     _unitCtrl = TextEditingController(text: e?.unit ?? '');
     _categoryCtrl = TextEditingController(text: e?.category ?? '');
+    _nameFocus = FocusNode();
+    _amountFocus = FocusNode();
+    if (widget.autoFocusName) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _nameFocus.requestFocus();
+      });
+    }
   }
 
   @override
@@ -652,6 +747,8 @@ class _GeneralItemDialogState extends ConsumerState<_GeneralItemDialog> {
     _amountCtrl.dispose();
     _unitCtrl.dispose();
     _categoryCtrl.dispose();
+    _nameFocus.dispose();
+    _amountFocus.dispose();
     super.dispose();
   }
 
@@ -674,7 +771,7 @@ class _GeneralItemDialogState extends ConsumerState<_GeneralItemDialog> {
                 // Name with autocomplete
                 RawAutocomplete<IngredientCatalogEntry>(
                   textEditingController: _nameCtrl,
-                  focusNode: FocusNode(),
+                  focusNode: _nameFocus,
                   optionsBuilder: (textEditingValue) {
                     final q = textEditingValue.text.trim().toLowerCase();
                     if (q.isEmpty) return const Iterable.empty();
@@ -690,6 +787,8 @@ class _GeneralItemDialogState extends ConsumerState<_GeneralItemDialog> {
                       _categoryCtrl.text = entry.defaultCategory;
                     }
                     setState(() {});
+                    // Jump to amount field after selection
+                    _amountFocus.requestFocus();
                   },
                   fieldViewBuilder:
                       (context, textCtrl, focusNode, onFieldSubmitted) {
@@ -697,11 +796,15 @@ class _GeneralItemDialogState extends ConsumerState<_GeneralItemDialog> {
                       controller: textCtrl,
                       focusNode: focusNode,
                       decoration: const InputDecoration(labelText: 'Name *'),
+                      textInputAction: TextInputAction.next,
                       validator: (v) =>
                           (v == null || v.trim().isEmpty)
                               ? 'Erforderlich'
                               : null,
-                      onFieldSubmitted: (_) => onFieldSubmitted(),
+                      onFieldSubmitted: (_) {
+                        onFieldSubmitted();
+                        _amountFocus.requestFocus();
+                      },
                     );
                   },
                   optionsViewBuilder: (context, onSelected, options) {
@@ -739,10 +842,12 @@ class _GeneralItemDialogState extends ConsumerState<_GeneralItemDialog> {
                     Expanded(
                       child: TextFormField(
                         controller: _amountCtrl,
+                        focusNode: _amountFocus,
                         decoration:
                             const InputDecoration(labelText: 'Menge'),
                         keyboardType: const TextInputType.numberWithOptions(
                             decimal: true),
+                        textInputAction: TextInputAction.next,
                         inputFormatters: [
                           FilteringTextInputFormatter.allow(
                               RegExp(r'[\d.,]')),
@@ -822,13 +927,24 @@ class _GeneralItemDialogState extends ConsumerState<_GeneralItemDialog> {
             _categoryCtrl.text = textCtrl.text;
           }
         });
-        return TextFormField(
-          controller: textCtrl,
-          focusNode: focusNode,
-          decoration: const InputDecoration(
-            labelText: 'Kategorie (optional)',
+        return KeyboardListener(
+          focusNode: FocusNode(), // wrapper for Shift+Enter detection
+          onKeyEvent: (event) {
+            if (event is KeyDownEvent &&
+                event.logicalKey == LogicalKeyboardKey.enter &&
+                HardwareKeyboard.instance.isShiftPressed) {
+              _submitAndContinue();
+            }
+          },
+          child: TextFormField(
+            controller: textCtrl,
+            focusNode: focusNode,
+            decoration: const InputDecoration(
+              labelText: 'Kategorie (optional)',
+              helperText: 'Shift+Enter = Speichern & Weiter',
+            ),
+            onFieldSubmitted: (_) => onFieldSubmitted(),
           ),
-          onFieldSubmitted: (_) => onFieldSubmitted(),
         );
       },
     );
@@ -846,6 +962,118 @@ class _GeneralItemDialogState extends ConsumerState<_GeneralItemDialog> {
     );
 
     Navigator.of(context).pop(item);
+  }
+
+  /// Save current item and signal caller to reopen the dialog.
+  void _submitAndContinue() {
+    if (!_formKey.currentState!.validate()) return;
+
+    final item = GeneralItem(
+      id: widget.existing?.id ?? _uuid.v4(),
+      name: _nameCtrl.text.trim(),
+      amount: double.tryParse(_amountCtrl.text.replaceAll(',', '.')) ?? 1,
+      unit: _unitCtrl.text.trim(),
+      category: _categoryCtrl.text.trim(),
+    );
+
+    // Pop with a record: (item, continue: true)
+    Navigator.of(context).pop((item, true));
+  }
+}
+
+// ── Quick edit dialog for shopping items (amount/unit/name) ───────
+
+class _ShoppingItemEditDialog extends StatefulWidget {
+  final ShoppingItem item;
+  const _ShoppingItemEditDialog({required this.item});
+
+  @override
+  State<_ShoppingItemEditDialog> createState() =>
+      _ShoppingItemEditDialogState();
+}
+
+class _ShoppingItemEditDialogState extends State<_ShoppingItemEditDialog> {
+  late final TextEditingController _nameCtrl;
+  late final TextEditingController _amountCtrl;
+  late final TextEditingController _unitCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameCtrl = TextEditingController(text: widget.item.name);
+    _amountCtrl = TextEditingController(
+      text: widget.item.amount == widget.item.amount.roundToDouble()
+          ? widget.item.amount.toInt().toString()
+          : widget.item.amount.toString(),
+    );
+    _unitCtrl = TextEditingController(text: widget.item.unit);
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _amountCtrl.dispose();
+    _unitCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Menge bearbeiten'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextFormField(
+            controller: _nameCtrl,
+            decoration: const InputDecoration(labelText: 'Name'),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: TextFormField(
+                  controller: _amountCtrl,
+                  decoration: const InputDecoration(labelText: 'Menge'),
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  autofocus: true,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'[\d.,]')),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: TextFormField(
+                  controller: _unitCtrl,
+                  decoration: const InputDecoration(labelText: 'Einheit'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Abbrechen'),
+        ),
+        FilledButton(
+          onPressed: () {
+            final updated = widget.item.copyWith(
+              name: _nameCtrl.text.trim(),
+              amount:
+                  double.tryParse(_amountCtrl.text.replaceAll(',', '.')) ??
+                      widget.item.amount,
+              unit: _unitCtrl.text.trim(),
+            );
+            Navigator.of(context).pop(updated);
+          },
+          child: const Text('Speichern'),
+        ),
+      ],
+    );
   }
 }
 

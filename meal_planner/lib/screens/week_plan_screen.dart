@@ -8,6 +8,7 @@ import '../providers/recipe_provider.dart';
 import '../providers/week_plan_provider.dart';
 import '../theme.dart';
 import '../widgets/recipe_picker_sheet.dart';
+import '../widgets/sync_status_icon.dart';
 
 /// The 7 day keys used in WeekPlan.days
 const _dayKeys = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
@@ -47,6 +48,7 @@ class WeekPlanScreen extends ConsumerWidget {
         title: _WeekNavigationBar(weekKey: weekKey),
         centerTitle: true,
         actions: [
+          const SyncStatusIcon(),
           IconButton(
             icon: const Icon(Icons.settings),
             onPressed: () => context.push('/settings'),
@@ -272,20 +274,12 @@ class _MealSlotRow extends ConsumerWidget {
         padding: const EdgeInsets.fromLTRB(40, 4, 12, 4),
         child: Row(
           children: [
-            // Meal icon
-            Icon(mealIcon, size: 18, color: PaperTheme.checked),
-            const SizedBox(width: 8),
-            // Meal label
-            SizedBox(
-              width: 64,
-              child: Text(
-                '$mealLabel:',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-              ),
+            // Meal icon (replaces text label to avoid wrapping on small screens)
+            Tooltip(
+              message: mealLabel,
+              child: Icon(mealIcon, size: 22, color: PaperTheme.checked),
             ),
-            const SizedBox(width: 4),
+            const SizedBox(width: 12),
             // Recipe name or empty hint
             Expanded(
               child: isEmpty

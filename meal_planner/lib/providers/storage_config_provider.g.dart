@@ -1,29 +1,27 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'ingredient_catalog_provider.dart';
+part of 'storage_config_provider.dart';
 
 // **************************************************************************
 // RiverpodGenerator
 // **************************************************************************
 
-String _$ingredientCatalogHash() => r'47733a613ec9edfb563817201b955078c7472d0f';
+String _$storageConfigNotifierHash() =>
+    r'b1c818ee50d46b88360ffb354b1d603a94ee2cf7';
 
-/// See also [IngredientCatalog].
-@ProviderFor(IngredientCatalog)
-final ingredientCatalogProvider =
-    AsyncNotifierProvider<
-      IngredientCatalog,
-      List<IngredientCatalogEntry>
-    >.internal(
-      IngredientCatalog.new,
-      name: r'ingredientCatalogProvider',
+/// See also [StorageConfigNotifier].
+@ProviderFor(StorageConfigNotifier)
+final storageConfigNotifierProvider =
+    AsyncNotifierProvider<StorageConfigNotifier, StorageConfig>.internal(
+      StorageConfigNotifier.new,
+      name: r'storageConfigNotifierProvider',
       debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
           ? null
-          : _$ingredientCatalogHash,
+          : _$storageConfigNotifierHash,
       dependencies: null,
       allTransitiveDependencies: null,
     );
 
-typedef _$IngredientCatalog = AsyncNotifier<List<IngredientCatalogEntry>>;
+typedef _$StorageConfigNotifier = AsyncNotifier<StorageConfig>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package
