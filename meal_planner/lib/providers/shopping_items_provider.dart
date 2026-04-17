@@ -12,7 +12,7 @@ class ShoppingItems extends _$ShoppingItems {
 
   @override
   Future<List<ShoppingItem>> build() async {
-    _repo = ref.watch(shoppingStateRepositoryProvider);
+    _repo = await ref.watch(shoppingStateRepositoryProvider.future);
     return _repo.readAll();
   }
 

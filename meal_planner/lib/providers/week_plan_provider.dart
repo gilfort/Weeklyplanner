@@ -16,7 +16,7 @@ class WeekPlanNotifier extends _$WeekPlanNotifier {
   @override
   Future<WeekPlan> build(String weekKey) async {
     _weekKey = weekKey;
-    _repo = ref.watch(weekPlanRepositoryProvider);
+    _repo = await ref.watch(weekPlanRepositoryProvider.future);
     final found = await _repo.findByWeekKey(weekKey);
     return found ?? WeekPlan(weekKey: weekKey);
   }

@@ -66,8 +66,9 @@ Future<List<ShoppingItem>> derivedShoppingList(
 
   // Merge general items into the same aggregation map.
   // If a general item matches a recipe ingredient by name|unit, amounts add up.
+  // Skip items excluded for this trip.
   final mergedKeys = <String>{};
-  for (final g in generalItems) {
+  for (final g in generalItems.where((g) => !g.excludedThisTrip)) {
     final key = '${g.name.toLowerCase()}|${g.unit.toLowerCase()}';
     if (aggregated.containsKey(key)) {
       aggregated[key] = aggregated[key]!.add(g.amount, merged: true);

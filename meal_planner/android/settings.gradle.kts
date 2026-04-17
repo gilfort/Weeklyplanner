@@ -24,3 +24,11 @@ plugins {
 }
 
 include(":app")
+
+// Redirect build directories outside OneDrive to avoid file-locking issues.
+// Flutter expects the :app build output at <flutter_project>/build/app/,
+// so we use the flutter project root (parent of android/) as the base.
+gradle.beforeProject {
+    val flutterProjectRoot = rootProject.projectDir.parentFile
+    buildDir = File("$flutterProjectRoot/build/${project.name}")
+}

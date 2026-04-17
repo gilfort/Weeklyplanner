@@ -7,7 +7,7 @@ part of 'derived_shopping_list_provider.dart';
 // **************************************************************************
 
 String _$derivedShoppingListHash() =>
-    r'adae340131842c83a902a4823c70bb494001b305';
+    r'918b092faa247b33781b6e9003d110cca05555f3';
 
 /// Pure derived provider — no own state.
 /// Aggregates scaled recipe ingredients from the active week plan

@@ -4,54 +4,87 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../repositories/repositories.dart';
-import 'storage_path_provider.dart';
+import '../services/webdav_credentials_service.dart';
+import 'storage_config_provider.dart';
 
 part 'repository_providers.g.dart';
 
-/// Creates the correct [StorageBackend] based on the current platform.
-/// On native platforms, watches [storagePathProvider] so that when the user
-/// changes the storage directory in Settings, all repositories rebuild.
 @riverpod
-StorageBackend storageBackend(StorageBackendRef ref) {
+WebDavCredentialsService webdavCredentialsService(
+    WebdavCredentialsServiceRef ref) {
+  return WebDavCredentialsService();
+}
+
+/// Creates the correct [StorageBackend] based on the current platform and
+/// user-configured [StorageConfig]. Async because the WebDAV branch needs
+/// to read the password from secure storage.
+@riverpod
+Future<StorageBackend> storageBackend(StorageBackendRef ref) async {
   if (kIsWeb) {
     return WebStorageBackend();
   }
-  final customPath = ref.watch(storagePathProvider).valueOrNull;
-  if (customPath != null && customPath.isNotEmpty) {
-    return FileStorageBackend(directoryOverride: Directory(customPath));
+
+  final config = await ref.watch(storageConfigNotifierProvider.future);
+
+  switch (config.type) {
+    case StorageType.saf:
+      final local = FileStorageBackend();
+      final remote = SafStorageBackend(treeUri: config.safUri!);
+      return CachedSyncStorageBackend(local: local, remote: remote);
+    case StorageType.webdav:
+      final pw =
+          await ref.read(webdavCredentialsServiceProvider).read(config);
+      if (pw == null) {
+        throw StateError('WebDAV password missing for ${config.webdavUrl}');
+      }
+      final local = FileStorageBackend();
+      final remote = WebDavStorageBackend(
+        baseUrl: config.webdavUrl!,
+        username: config.webdavUsername!,
+        password: pw,
+        pathPrefix: config.webdavPathPrefix ?? '/MealPlanner',
+      );
+      return CachedSyncStorageBackend(local: local, remote: remote);
+    case StorageType.filesystem:
+      return FileStorageBackend(directoryOverride: Directory(config.path!));
+    case StorageType.local:
+      return FileStorageBackend();
   }
-  return FileStorageBackend();
 }
 
 @riverpod
-RecipeRepository recipeRepository(RecipeRepositoryRef ref) {
-  return RecipeRepository(storage: ref.watch(storageBackendProvider));
+Future<RecipeRepository> recipeRepository(RecipeRepositoryRef ref) async {
+  return RecipeRepository(storage: await ref.watch(storageBackendProvider.future));
 }
 
 @riverpod
-WeekPlanRepository weekPlanRepository(WeekPlanRepositoryRef ref) {
-  return WeekPlanRepository(storage: ref.watch(storageBackendProvider));
+Future<WeekPlanRepository> weekPlanRepository(WeekPlanRepositoryRef ref) async {
+  return WeekPlanRepository(
+      storage: await ref.watch(storageBackendProvider.future));
 }
 
 @riverpod
-GeneralItemRepository generalItemRepository(GeneralItemRepositoryRef ref) {
-  return GeneralItemRepository(storage: ref.watch(storageBackendProvider));
+Future<GeneralItemRepository> generalItemRepository(
+    GeneralItemRepositoryRef ref) async {
+  return GeneralItemRepository(
+      storage: await ref.watch(storageBackendProvider.future));
 }
 
 @riverpod
-ShoppingStateRepository shoppingStateRepository(
-    ShoppingStateRepositoryRef ref) {
-  return ShoppingStateRepository(storage: ref.watch(storageBackendProvider));
+Future<ShoppingStateRepository> shoppingStateRepository(
+    ShoppingStateRepositoryRef ref) async {
+  return ShoppingStateRepository(
+      storage: await ref.watch(storageBackendProvider.future));
 }
 
 @riverpod
-IngredientCatalogRepository ingredientCatalogRepository(
-    IngredientCatalogRepositoryRef ref) {
+Future<IngredientCatalogRepository> ingredientCatalogRepository(
+    IngredientCatalogRepositoryRef ref) async {
   return IngredientCatalogRepository(
-      storage: ref.watch(storageBackendProvider));
+      storage: await ref.watch(storageBackendProvider.future));
 }
 
 @riverpod
-UnitRepository unitRepository(UnitRepositoryRef ref) {
-  return UnitRepository(storage: ref.watch(storageBackendProvider));
+Future<UnitRepository> unitRepository(UnitRepositoryRef ref) async {
+  return UnitRepository(storage: await ref.watch(storageBackendProvider.future));
 }

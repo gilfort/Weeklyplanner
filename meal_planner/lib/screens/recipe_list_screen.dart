@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../models/recipe.dart';
 import '../providers/recipe_provider.dart';
 import '../theme.dart';
+import '../widgets/sync_status_icon.dart';
 
 class RecipeListScreen extends ConsumerWidget {
   const RecipeListScreen({super.key});
@@ -17,6 +18,7 @@ class RecipeListScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Rezeptbuch'),
         actions: [
+          const SyncStatusIcon(),
           IconButton(
             icon: const Icon(Icons.settings),
             onPressed: () => context.push('/settings'),

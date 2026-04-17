@@ -11,7 +11,7 @@ class Units extends _$Units {
 
   @override
   Future<List<String>> build() async {
-    _repo = ref.watch(unitRepositoryProvider);
+    _repo = await ref.watch(unitRepositoryProvider.future);
     return _repo.readAll();
   }
 

@@ -6,7 +6,7 @@ part of 'unit_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$unitsHash() => r'bebc382d15475bf4d5c69d86228a064f2b44bb36';
+String _$unitsHash() => r'06cd003c6f93b8fd32bfed6a46efb4d8574923f0';
 
 /// See also [Units].
 @ProviderFor(Units)

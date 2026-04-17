@@ -12,7 +12,7 @@ class IngredientCatalog extends _$IngredientCatalog {
 
   @override
   Future<List<IngredientCatalogEntry>> build() async {
-    _repo = ref.watch(ingredientCatalogRepositoryProvider);
+    _repo = await ref.watch(ingredientCatalogRepositoryProvider.future);
     return _repo.readAll();
   }
 

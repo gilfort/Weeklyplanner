@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'providers/recipe_provider.dart';
 import 'screens/recipe_edit_screen.dart';
 import 'screens/recipe_list_screen.dart';
+import 'screens/setup_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/shopping_list_screen.dart';
 import 'screens/week_plan_screen.dart';
@@ -17,6 +18,12 @@ GoRouter createRouter(Ref ref) {
     navigatorKey: _rootNavigatorKey,
     initialLocation: '/plan',
     routes: [
+      // ── First-run setup ──
+      GoRoute(
+        path: '/setup',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const SetupScreen(),
+      ),
       // ── Settings (full-screen, outside shell) ──
       GoRoute(
         path: '/settings',
