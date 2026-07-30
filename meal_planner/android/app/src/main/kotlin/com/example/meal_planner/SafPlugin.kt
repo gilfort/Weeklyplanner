@@ -69,6 +69,11 @@ class SafPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, ActivityAware,
                 val content = call.argument<String>("content") ?: return result.error("ARG", "content missing", null)
                 writeFile(treeUri, name, content, result)
             }
+            "deleteFile" -> {
+                val treeUri = call.argument<String>("treeUri") ?: return result.error("ARG", "treeUri missing", null)
+                val name    = call.argument<String>("name")    ?: return result.error("ARG", "name missing", null)
+                deleteFile(treeUri, name, result)
+            }
             "listFiles" -> {
                 val treeUri = call.argument<String>("treeUri") ?: return result.error("ARG", "treeUri missing", null)
                 listFiles(treeUri, result)
@@ -178,6 +183,18 @@ class SafPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, ActivityAware,
             result.success(null)
         } catch (e: Exception) {
             result.error("WRITE_ERROR", e.message, null)
+        }
+    }
+
+    private fun deleteFile(treeUriStr: String, name: String, result: MethodChannel.Result) {
+        try {
+            val treeUri = Uri.parse(treeUriStr)
+            val found = findDocId(treeUri, name)
+            if (found == null) { result.success(null); return }
+            DocumentsContract.deleteDocument(context.contentResolver, docUri(treeUri, found.first))
+            result.success(null)
+        } catch (e: Exception) {
+            result.error("DELETE_ERROR", e.message, null)
         }
     }
 
