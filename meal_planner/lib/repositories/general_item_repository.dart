@@ -1,20 +1,30 @@
 import '../models/general_item.dart';
-import 'json_file_repository.dart';
+import 'entity_repository.dart';
 
-class GeneralItemRepository extends JsonFileRepository<GeneralItem> {
+class GeneralItemRepository extends EntityRepository<GeneralItem> {
   GeneralItemRepository({required super.storage})
-      : super(fileName: 'general.json');
+      : super(dirName: 'general_items');
 
   @override
-  GeneralItem fromJson(Map<String, dynamic> json) =>
-      GeneralItem.fromJson(json);
+  GeneralItem fromJson(Map<String, dynamic> json) => GeneralItem.fromJson(json);
 
   @override
   Map<String, dynamic> toJson(GeneralItem item) => item.toJson();
 
-  Future<void> upsertItem(GeneralItem item) =>
-      upsert(item, (i) => i.id);
+  @override
+  String idOf(GeneralItem item) => item.id;
 
-  Future<bool> deleteItem(String id) =>
-      deleteById(id, (i) => i.id);
+  @override
+  bool isDeleted(GeneralItem item) => item.deleted;
+
+  @override
+  DateTime? deletedAtOf(GeneralItem item) => item.deletedAt;
+
+  @override
+  GeneralItem markDeleted(GeneralItem item, DateTime at) =>
+      item.copyWith(deleted: true, deletedAt: at);
+
+  Future<void> upsertItem(GeneralItem item) => upsert(item);
+
+  Future<bool> deleteItem(String id) => delete(id);
 }

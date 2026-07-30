@@ -1,10 +1,10 @@
 import '../models/ingredient_catalog_entry.dart';
-import 'json_file_repository.dart';
+import 'entity_repository.dart';
 
 class IngredientCatalogRepository
-    extends JsonFileRepository<IngredientCatalogEntry> {
+    extends EntityRepository<IngredientCatalogEntry> {
   IngredientCatalogRepository({required super.storage})
-      : super(fileName: 'ingredient_catalog.json');
+      : super(dirName: 'catalog');
 
   @override
   IngredientCatalogEntry fromJson(Map<String, dynamic> json) =>
@@ -13,8 +13,23 @@ class IngredientCatalogRepository
   @override
   Map<String, dynamic> toJson(IngredientCatalogEntry item) => item.toJson();
 
-  Future<void> upsertEntry(IngredientCatalogEntry entry) =>
-      upsert(entry, (e) => e.id);
+  @override
+  String idOf(IngredientCatalogEntry item) => item.id;
 
-  Future<bool> deleteEntry(String id) => deleteById(id, (e) => e.id);
+  @override
+  bool isDeleted(IngredientCatalogEntry item) => item.deleted;
+
+  @override
+  DateTime? deletedAtOf(IngredientCatalogEntry item) => item.deletedAt;
+
+  @override
+  IngredientCatalogEntry markDeleted(
+    IngredientCatalogEntry item,
+    DateTime at,
+  ) =>
+      item.copyWith(deleted: true, deletedAt: at);
+
+  Future<void> upsertEntry(IngredientCatalogEntry entry) => upsert(entry);
+
+  Future<bool> deleteEntry(String id) => delete(id);
 }

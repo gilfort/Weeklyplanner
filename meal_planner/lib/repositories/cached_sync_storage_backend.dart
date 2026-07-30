@@ -28,6 +28,16 @@ class CachedSyncStorageBackend implements StorageBackend {
     _dirtyKeys.add(key);
   }
 
+  @override
+  Future<void> delete(String key) async {
+    await local.delete(key);
+    _dirtyKeys.remove(key);
+    await remote.delete(key);
+  }
+
+  @override
+  Future<List<String>> list(String dir) => local.list(dir);
+
   /// Full two-way sync:
   /// - Remote wins when local cache is empty (fresh install / new device).
   /// - Dirty local files are pushed; if remote is newer than dirty local,

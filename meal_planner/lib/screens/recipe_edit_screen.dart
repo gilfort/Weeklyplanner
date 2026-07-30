@@ -7,6 +7,7 @@ import 'package:uuid/uuid.dart';
 import '../models/ingredient.dart';
 import '../models/ingredient_catalog_entry.dart';
 import '../models/recipe.dart';
+import '../models/unit_conversion.dart';
 import '../providers/ingredient_catalog_provider.dart';
 import '../providers/recipe_provider.dart';
 import '../providers/unit_provider.dart';
@@ -27,7 +28,10 @@ class _RecipeEditScreenState extends ConsumerState<RecipeEditScreen> {
   late final TextEditingController _descCtrl;
   late final TextEditingController _servingsCtrl;
   late final TextEditingController _tagsCtrl;
-  late final List<_IngredientRow> _ingredients;
+
+  /// Built lazily: ingredient rows show names from the catalog, so they can
+  /// only be filled once the catalog has loaded.
+  List<_IngredientRow>? _ingredients;
 
   bool get _isEditing => widget.recipe != null;
 
@@ -40,10 +44,6 @@ class _RecipeEditScreenState extends ConsumerState<RecipeEditScreen> {
     _servingsCtrl =
         TextEditingController(text: (r?.servings ?? 2).toString());
     _tagsCtrl = TextEditingController(text: r?.tags.join(', ') ?? '');
-    _ingredients = r?.ingredients
-            .map((i) => _IngredientRow.fromIngredient(i))
-            .toList() ??
-        [];
   }
 
   @override
@@ -52,15 +52,33 @@ class _RecipeEditScreenState extends ConsumerState<RecipeEditScreen> {
     _descCtrl.dispose();
     _servingsCtrl.dispose();
     _tagsCtrl.dispose();
-    for (final row in _ingredients) {
+    for (final row in _ingredients ?? const <_IngredientRow>[]) {
       row.dispose();
     }
     super.dispose();
   }
 
+  List<_IngredientRow> _buildRows(List<IngredientCatalogEntry> catalog) {
+    final byId = {for (final e in catalog) e.id: e};
+    return widget.recipe?.ingredients
+            .map((i) => _IngredientRow.fromIngredient(i, byId[i.catalogId]))
+            .toList() ??
+        [];
+  }
+
   @override
   Widget build(BuildContext context) {
-    final catalog = ref.watch(ingredientCatalogProvider).valueOrNull ?? [];
+    final catalogAsync = ref.watch(ingredientCatalogProvider);
+    final catalog = catalogAsync.valueOrNull;
+    if (catalog == null) {
+      return Scaffold(
+        appBar: AppBar(
+          title: Text(_isEditing ? 'Rezept bearbeiten' : 'Neues Rezept'),
+        ),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+    final rows = _ingredients ??= _buildRows(catalog);
     final units = ref.watch(unitsProvider).valueOrNull ?? [];
 
     return Scaffold(
@@ -144,13 +162,13 @@ class _RecipeEditScreenState extends ConsumerState<RecipeEditScreen> {
               ],
             ),
             const Divider(),
-            ..._ingredients.asMap().entries.map((e) {
+            ...rows.asMap().entries.map((e) {
               return _buildIngredientRow(
                 e.value, e.key, catalog, units,
-                isLast: e.key == _ingredients.length - 1,
+                isLast: e.key == rows.length - 1,
               );
             }),
-            if (_ingredients.isEmpty)
+            if (rows.isEmpty)
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 8),
                 child: Text(
@@ -197,6 +215,10 @@ class _RecipeEditScreenState extends ConsumerState<RecipeEditScreen> {
                   },
                   displayStringForOption: (e) => e.name,
                   onSelected: (entry) {
+                    // Picking from the catalog binds this row to that
+                    // ingredient's identity; later free-text edits rename it
+                    // instead of creating a second entry.
+                    row.catalogId = entry.id;
                     if (entry.defaultUnit.isNotEmpty) {
                       row.unitCtrl.text = entry.defaultUnit;
                     }
@@ -456,23 +478,26 @@ class _RecipeEditScreenState extends ConsumerState<RecipeEditScreen> {
   }
 
   void _addIngredientRow({bool focusName = false}) {
+    final rows = _ingredients ??= [];
     setState(() {
-      _ingredients.add(_IngredientRow.empty());
+      rows.add(_IngredientRow.empty());
     });
     if (focusName) {
       // Schedule focus request after build
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_ingredients.isNotEmpty) {
-          _ingredients.last.nameFocus.requestFocus();
+        if (rows.isNotEmpty) {
+          rows.last.nameFocus.requestFocus();
         }
       });
     }
   }
 
   void _removeIngredientRow(int index) {
+    final rows = _ingredients;
+    if (rows == null) return;
     setState(() {
-      _ingredients[index].dispose();
-      _ingredients.removeAt(index);
+      rows[index].dispose();
+      rows.removeAt(index);
     });
   }
 
@@ -485,15 +510,30 @@ class _RecipeEditScreenState extends ConsumerState<RecipeEditScreen> {
         .where((t) => t.isNotEmpty)
         .toList();
 
-    final ingredients = _ingredients.map((row) {
-      return Ingredient(
-        id: row.id,
-        name: row.nameCtrl.text.trim(),
-        amount: double.tryParse(row.amountCtrl.text.replaceAll(',', '.')) ?? 0,
-        unit: row.unitCtrl.text.trim(),
-        category: row.categoryCtrl.text.trim(),
+    // Resolve every row to a catalog id first: rows loaded from the recipe
+    // keep theirs (a renamed name updates the catalog entry in place), new
+    // rows reuse an entry with the same name or mint a fresh id.
+    final catalogNotifier = ref.read(ingredientCatalogProvider.notifier);
+    final unitsNotifier = ref.read(unitsProvider.notifier);
+    final ingredients = <Ingredient>[];
+
+    for (final row in _ingredients ?? const <_IngredientRow>[]) {
+      final unit = row.unitCtrl.text.trim();
+      final catalogId = await catalogNotifier.resolve(
+        catalogId: row.catalogId,
+        name: row.nameCtrl.text,
+        unit: unit,
+        category: row.categoryCtrl.text,
       );
-    }).toList();
+      row.catalogId = catalogId;
+      ingredients.add(Ingredient(
+        catalogId: catalogId,
+        amount:
+            double.tryParse(row.amountCtrl.text.replaceAll(',', '.')) ?? 0,
+        unit: unit,
+      ));
+      if (unit.isNotEmpty) await unitsNotifier.addUnit(unit);
+    }
 
     final recipe = Recipe(
       id: widget.recipe?.id ?? _uuid.v4(),
@@ -505,22 +545,6 @@ class _RecipeEditScreenState extends ConsumerState<RecipeEditScreen> {
     );
 
     await ref.read(recipesProvider.notifier).upsert(recipe);
-
-    final catalogNotifier = ref.read(ingredientCatalogProvider.notifier);
-    for (final ing in ingredients) {
-      await catalogNotifier.learnIngredient(
-        name: ing.name,
-        unit: ing.unit,
-        category: ing.category,
-      );
-    }
-
-    final unitsNotifier = ref.read(unitsProvider.notifier);
-    for (final ing in ingredients) {
-      if (ing.unit.isNotEmpty) {
-        await unitsNotifier.addUnit(ing.unit);
-      }
-    }
 
     if (mounted) context.pop();
   }
@@ -553,7 +577,9 @@ class _RecipeEditScreenState extends ConsumerState<RecipeEditScreen> {
 // ── Helper class to hold controllers + focus nodes for one ingredient row ──
 
 class _IngredientRow {
-  final String id;
+  /// Null until the row is bound to a catalog entry — either by picking one
+  /// from the autocomplete or on save.
+  String? catalogId;
   final TextEditingController nameCtrl;
   final TextEditingController amountCtrl;
   final TextEditingController unitCtrl;
@@ -564,7 +590,7 @@ class _IngredientRow {
   final FocusNode categoryFocus;
 
   _IngredientRow({
-    required this.id,
+    this.catalogId,
     required this.nameCtrl,
     required this.amountCtrl,
     required this.unitCtrl,
@@ -576,7 +602,6 @@ class _IngredientRow {
   });
 
   factory _IngredientRow.empty() => _IngredientRow(
-        id: _uuid.v4(),
         nameCtrl: TextEditingController(),
         amountCtrl: TextEditingController(),
         unitCtrl: TextEditingController(),
@@ -587,12 +612,17 @@ class _IngredientRow {
         categoryFocus: FocusNode(),
       );
 
-  factory _IngredientRow.fromIngredient(Ingredient i) => _IngredientRow(
-        id: i.id,
-        nameCtrl: TextEditingController(text: i.name),
-        amountCtrl: TextEditingController(text: i.amount.toString()),
+  factory _IngredientRow.fromIngredient(
+    Ingredient i,
+    IngredientCatalogEntry? entry,
+  ) =>
+      _IngredientRow(
+        catalogId: i.catalogId,
+        nameCtrl: TextEditingController(text: entry?.name ?? ''),
+        amountCtrl: TextEditingController(text: formatAmount(i.amount)),
         unitCtrl: TextEditingController(text: i.unit),
-        categoryCtrl: TextEditingController(text: i.category),
+        categoryCtrl:
+            TextEditingController(text: entry?.defaultCategory ?? ''),
         nameFocus: FocusNode(),
         amountFocus: FocusNode(),
         unitFocus: FocusNode(),

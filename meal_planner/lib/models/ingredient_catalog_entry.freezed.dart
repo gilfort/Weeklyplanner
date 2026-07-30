@@ -23,11 +23,13 @@ IngredientCatalogEntry _$IngredientCatalogEntryFromJson(
 
 /// @nodoc
 mixin _$IngredientCatalogEntry {
-  String get id =>
-      throw _privateConstructorUsedError; // lowercase name as stable key
+  /// Stable UUID. Never derived from the name.
+  String get id => throw _privateConstructorUsedError;
   String get name => throw _privateConstructorUsedError;
   String get defaultUnit => throw _privateConstructorUsedError;
   String get defaultCategory => throw _privateConstructorUsedError;
+  bool get deleted => throw _privateConstructorUsedError;
+  DateTime? get deletedAt => throw _privateConstructorUsedError;
 
   /// Serializes this IngredientCatalogEntry to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -51,6 +53,8 @@ abstract class $IngredientCatalogEntryCopyWith<$Res> {
     String name,
     String defaultUnit,
     String defaultCategory,
+    bool deleted,
+    DateTime? deletedAt,
   });
 }
 
@@ -76,6 +80,8 @@ class _$IngredientCatalogEntryCopyWithImpl<
     Object? name = null,
     Object? defaultUnit = null,
     Object? defaultCategory = null,
+    Object? deleted = null,
+    Object? deletedAt = freezed,
   }) {
     return _then(
       _value.copyWith(
@@ -95,6 +101,14 @@ class _$IngredientCatalogEntryCopyWithImpl<
                 ? _value.defaultCategory
                 : defaultCategory // ignore: cast_nullable_to_non_nullable
                       as String,
+            deleted: null == deleted
+                ? _value.deleted
+                : deleted // ignore: cast_nullable_to_non_nullable
+                      as bool,
+            deletedAt: freezed == deletedAt
+                ? _value.deletedAt
+                : deletedAt // ignore: cast_nullable_to_non_nullable
+                      as DateTime?,
           )
           as $Val,
     );
@@ -115,6 +129,8 @@ abstract class _$$IngredientCatalogEntryImplCopyWith<$Res>
     String name,
     String defaultUnit,
     String defaultCategory,
+    bool deleted,
+    DateTime? deletedAt,
   });
 }
 
@@ -137,6 +153,8 @@ class __$$IngredientCatalogEntryImplCopyWithImpl<$Res>
     Object? name = null,
     Object? defaultUnit = null,
     Object? defaultCategory = null,
+    Object? deleted = null,
+    Object? deletedAt = freezed,
   }) {
     return _then(
       _$IngredientCatalogEntryImpl(
@@ -156,6 +174,14 @@ class __$$IngredientCatalogEntryImplCopyWithImpl<$Res>
             ? _value.defaultCategory
             : defaultCategory // ignore: cast_nullable_to_non_nullable
                   as String,
+        deleted: null == deleted
+            ? _value.deleted
+            : deleted // ignore: cast_nullable_to_non_nullable
+                  as bool,
+        deletedAt: freezed == deletedAt
+            ? _value.deletedAt
+            : deletedAt // ignore: cast_nullable_to_non_nullable
+                  as DateTime?,
       ),
     );
   }
@@ -163,20 +189,22 @@ class __$$IngredientCatalogEntryImplCopyWithImpl<$Res>
 
 /// @nodoc
 @JsonSerializable()
-class _$IngredientCatalogEntryImpl implements _IngredientCatalogEntry {
+class _$IngredientCatalogEntryImpl extends _IngredientCatalogEntry {
   const _$IngredientCatalogEntryImpl({
     required this.id,
     required this.name,
     this.defaultUnit = '',
     this.defaultCategory = '',
-  });
+    this.deleted = false,
+    this.deletedAt,
+  }) : super._();
 
   factory _$IngredientCatalogEntryImpl.fromJson(Map<String, dynamic> json) =>
       _$$IngredientCatalogEntryImplFromJson(json);
 
+  /// Stable UUID. Never derived from the name.
   @override
   final String id;
-  // lowercase name as stable key
   @override
   final String name;
   @override
@@ -185,10 +213,15 @@ class _$IngredientCatalogEntryImpl implements _IngredientCatalogEntry {
   @override
   @JsonKey()
   final String defaultCategory;
+  @override
+  @JsonKey()
+  final bool deleted;
+  @override
+  final DateTime? deletedAt;
 
   @override
   String toString() {
-    return 'IngredientCatalogEntry(id: $id, name: $name, defaultUnit: $defaultUnit, defaultCategory: $defaultCategory)';
+    return 'IngredientCatalogEntry(id: $id, name: $name, defaultUnit: $defaultUnit, defaultCategory: $defaultCategory, deleted: $deleted, deletedAt: $deletedAt)';
   }
 
   @override
@@ -201,13 +234,23 @@ class _$IngredientCatalogEntryImpl implements _IngredientCatalogEntry {
             (identical(other.defaultUnit, defaultUnit) ||
                 other.defaultUnit == defaultUnit) &&
             (identical(other.defaultCategory, defaultCategory) ||
-                other.defaultCategory == defaultCategory));
+                other.defaultCategory == defaultCategory) &&
+            (identical(other.deleted, deleted) || other.deleted == deleted) &&
+            (identical(other.deletedAt, deletedAt) ||
+                other.deletedAt == deletedAt));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode =>
-      Object.hash(runtimeType, id, name, defaultUnit, defaultCategory);
+  int get hashCode => Object.hash(
+    runtimeType,
+    id,
+    name,
+    defaultUnit,
+    defaultCategory,
+    deleted,
+    deletedAt,
+  );
 
   /// Create a copy of IngredientCatalogEntry
   /// with the given fields replaced by the non-null parameter values.
@@ -227,25 +270,33 @@ class _$IngredientCatalogEntryImpl implements _IngredientCatalogEntry {
   }
 }
 
-abstract class _IngredientCatalogEntry implements IngredientCatalogEntry {
+abstract class _IngredientCatalogEntry extends IngredientCatalogEntry {
   const factory _IngredientCatalogEntry({
     required final String id,
     required final String name,
     final String defaultUnit,
     final String defaultCategory,
+    final bool deleted,
+    final DateTime? deletedAt,
   }) = _$IngredientCatalogEntryImpl;
+  const _IngredientCatalogEntry._() : super._();
 
   factory _IngredientCatalogEntry.fromJson(Map<String, dynamic> json) =
       _$IngredientCatalogEntryImpl.fromJson;
 
+  /// Stable UUID. Never derived from the name.
   @override
-  String get id; // lowercase name as stable key
+  String get id;
   @override
   String get name;
   @override
   String get defaultUnit;
   @override
   String get defaultCategory;
+  @override
+  bool get deleted;
+  @override
+  DateTime? get deletedAt;
 
   /// Create a copy of IngredientCatalogEntry
   /// with the given fields replaced by the non-null parameter values.

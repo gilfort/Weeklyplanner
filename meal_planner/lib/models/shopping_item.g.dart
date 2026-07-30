@@ -8,28 +8,28 @@ part of 'shopping_item.dart';
 
 _$ShoppingItemImpl _$$ShoppingItemImplFromJson(Map<String, dynamic> json) =>
     _$ShoppingItemImpl(
-      id: json['id'] as String,
+      catalogId: json['catalogId'] as String,
       name: json['name'] as String,
-      amount: (json['amount'] as num?)?.toDouble() ?? 1.0,
-      unit: json['unit'] as String? ?? '',
       category: json['category'] as String? ?? '',
-      isChecked: json['isChecked'] as bool? ?? false,
-      isUnavailable: json['isUnavailable'] as bool? ?? false,
+      amounts:
+          (json['amounts'] as List<dynamic>?)
+              ?.map((e) => ShoppingAmount.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const <ShoppingAmount>[],
       source:
           $enumDecodeNullable(_$ShoppingSourceEnumMap, json['source']) ??
           ShoppingSource.general,
+      hasQuickAdd: json['hasQuickAdd'] as bool? ?? false,
     );
 
 Map<String, dynamic> _$$ShoppingItemImplToJson(_$ShoppingItemImpl instance) =>
     <String, dynamic>{
-      'id': instance.id,
+      'catalogId': instance.catalogId,
       'name': instance.name,
-      'amount': instance.amount,
-      'unit': instance.unit,
       'category': instance.category,
-      'isChecked': instance.isChecked,
-      'isUnavailable': instance.isUnavailable,
+      'amounts': instance.amounts.map((e) => e.toJson()).toList(),
       'source': _$ShoppingSourceEnumMap[instance.source]!,
+      'hasQuickAdd': instance.hasQuickAdd,
     };
 
 const _$ShoppingSourceEnumMap = {

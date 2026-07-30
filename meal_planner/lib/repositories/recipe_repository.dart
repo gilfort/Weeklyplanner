@@ -1,9 +1,8 @@
 import '../models/recipe.dart';
-import 'json_file_repository.dart';
+import 'entity_repository.dart';
 
-class RecipeRepository extends JsonFileRepository<Recipe> {
-  RecipeRepository({required super.storage})
-      : super(fileName: 'recipes.json');
+class RecipeRepository extends EntityRepository<Recipe> {
+  RecipeRepository({required super.storage}) : super(dirName: 'recipes');
 
   @override
   Recipe fromJson(Map<String, dynamic> json) => Recipe.fromJson(json);
@@ -11,18 +10,20 @@ class RecipeRepository extends JsonFileRepository<Recipe> {
   @override
   Map<String, dynamic> toJson(Recipe item) => item.toJson();
 
-  Future<void> upsertRecipe(Recipe recipe) =>
-      upsert(recipe, (r) => r.id);
+  @override
+  String idOf(Recipe item) => item.id;
 
-  Future<bool> deleteRecipe(String id) =>
-      deleteById(id, (r) => r.id);
+  @override
+  bool isDeleted(Recipe item) => item.deleted;
 
-  Future<Recipe?> findById(String id) async {
-    final items = await readAll();
-    try {
-      return items.firstWhere((r) => r.id == id);
-    } catch (_) {
-      return null;
-    }
-  }
+  @override
+  DateTime? deletedAtOf(Recipe item) => item.deletedAt;
+
+  @override
+  Recipe markDeleted(Recipe item, DateTime at) =>
+      item.copyWith(deleted: true, deletedAt: at);
+
+  Future<void> upsertRecipe(Recipe recipe) => upsert(recipe);
+
+  Future<bool> deleteRecipe(String id, {DateTime? now}) => delete(id, now: now);
 }

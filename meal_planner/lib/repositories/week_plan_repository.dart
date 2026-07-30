@@ -1,9 +1,8 @@
 import '../models/week_plan.dart';
-import 'json_file_repository.dart';
+import 'entity_repository.dart';
 
-class WeekPlanRepository extends JsonFileRepository<WeekPlan> {
-  WeekPlanRepository({required super.storage})
-      : super(fileName: 'weekplans.json');
+class WeekPlanRepository extends EntityRepository<WeekPlan> {
+  WeekPlanRepository({required super.storage}) : super(dirName: 'weeks');
 
   @override
   WeekPlan fromJson(Map<String, dynamic> json) => WeekPlan.fromJson(json);
@@ -11,18 +10,22 @@ class WeekPlanRepository extends JsonFileRepository<WeekPlan> {
   @override
   Map<String, dynamic> toJson(WeekPlan item) => item.toJson();
 
-  Future<void> upsertWeekPlan(WeekPlan plan) =>
-      upsert(plan, (p) => p.weekKey);
+  @override
+  String idOf(WeekPlan item) => item.weekKey;
 
-  Future<bool> deleteWeekPlan(String weekKey) =>
-      deleteById(weekKey, (p) => p.weekKey);
+  @override
+  bool isDeleted(WeekPlan item) => item.deleted;
 
-  Future<WeekPlan?> findByWeekKey(String weekKey) async {
-    final items = await readAll();
-    try {
-      return items.firstWhere((p) => p.weekKey == weekKey);
-    } catch (_) {
-      return null;
-    }
-  }
+  @override
+  DateTime? deletedAtOf(WeekPlan item) => item.deletedAt;
+
+  @override
+  WeekPlan markDeleted(WeekPlan item, DateTime at) =>
+      item.copyWith(deleted: true, deletedAt: at);
+
+  Future<void> upsertWeekPlan(WeekPlan plan) => upsert(plan);
+
+  Future<bool> deleteWeekPlan(String weekKey) => delete(weekKey);
+
+  Future<WeekPlan?> findByWeekKey(String weekKey) => findById(weekKey);
 }

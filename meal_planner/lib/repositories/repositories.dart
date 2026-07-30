@@ -4,7 +4,7 @@ export 'web_storage_backend.dart';
 export 'saf_storage_backend.dart';
 export 'webdav_storage_backend.dart';
 export 'cached_sync_storage_backend.dart';
-export 'json_file_repository.dart';
+export 'entity_repository.dart';
 export 'recipe_repository.dart';
 export 'week_plan_repository.dart';
 export 'general_item_repository.dart';

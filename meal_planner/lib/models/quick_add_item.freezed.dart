@@ -3,7 +3,7 @@
 // ignore_for_file: type=lint
 // ignore_for_file: unused_element, deprecated_member_use, deprecated_member_use_from_same_package, use_function_type_syntax_for_parameters, unnecessary_const, avoid_init_to_null, invalid_override_different_default_values_named, prefer_expression_function_bodies, annotate_overrides, invalid_annotation_target, unnecessary_question_mark
 
-part of 'general_item.dart';
+part of 'quick_add_item.dart';
 
 // **************************************************************************
 // FreezedGenerator
@@ -15,55 +15,47 @@ final _privateConstructorUsedError = UnsupportedError(
   'It seems like you constructed your class using `MyClass._()`. This constructor is only meant to be used by freezed and you are not supposed to need it nor use it.\nPlease check the documentation here for more information: https://github.com/rrousselGit/freezed#adding-getters-and-methods-to-our-models',
 );
 
-GeneralItem _$GeneralItemFromJson(Map<String, dynamic> json) {
-  return _GeneralItem.fromJson(json);
+QuickAddItem _$QuickAddItemFromJson(Map<String, dynamic> json) {
+  return _QuickAddItem.fromJson(json);
 }
 
 /// @nodoc
-mixin _$GeneralItem {
+mixin _$QuickAddItem {
   String get catalogId => throw _privateConstructorUsedError;
   double get amount => throw _privateConstructorUsedError;
   String get unit => throw _privateConstructorUsedError;
-  bool get deleted => throw _privateConstructorUsedError;
-  DateTime? get deletedAt => throw _privateConstructorUsedError;
 
-  /// Serializes this GeneralItem to a JSON map.
+  /// Serializes this QuickAddItem to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
 
-  /// Create a copy of GeneralItem
+  /// Create a copy of QuickAddItem
   /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
-  $GeneralItemCopyWith<GeneralItem> get copyWith =>
+  $QuickAddItemCopyWith<QuickAddItem> get copyWith =>
       throw _privateConstructorUsedError;
 }
 
 /// @nodoc
-abstract class $GeneralItemCopyWith<$Res> {
-  factory $GeneralItemCopyWith(
-    GeneralItem value,
-    $Res Function(GeneralItem) then,
-  ) = _$GeneralItemCopyWithImpl<$Res, GeneralItem>;
+abstract class $QuickAddItemCopyWith<$Res> {
+  factory $QuickAddItemCopyWith(
+    QuickAddItem value,
+    $Res Function(QuickAddItem) then,
+  ) = _$QuickAddItemCopyWithImpl<$Res, QuickAddItem>;
   @useResult
-  $Res call({
-    String catalogId,
-    double amount,
-    String unit,
-    bool deleted,
-    DateTime? deletedAt,
-  });
+  $Res call({String catalogId, double amount, String unit});
 }
 
 /// @nodoc
-class _$GeneralItemCopyWithImpl<$Res, $Val extends GeneralItem>
-    implements $GeneralItemCopyWith<$Res> {
-  _$GeneralItemCopyWithImpl(this._value, this._then);
+class _$QuickAddItemCopyWithImpl<$Res, $Val extends QuickAddItem>
+    implements $QuickAddItemCopyWith<$Res> {
+  _$QuickAddItemCopyWithImpl(this._value, this._then);
 
   // ignore: unused_field
   final $Val _value;
   // ignore: unused_field
   final $Res Function($Val) _then;
 
-  /// Create a copy of GeneralItem
+  /// Create a copy of QuickAddItem
   /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
@@ -71,8 +63,6 @@ class _$GeneralItemCopyWithImpl<$Res, $Val extends GeneralItem>
     Object? catalogId = null,
     Object? amount = null,
     Object? unit = null,
-    Object? deleted = null,
-    Object? deletedAt = freezed,
   }) {
     return _then(
       _value.copyWith(
@@ -88,14 +78,6 @@ class _$GeneralItemCopyWithImpl<$Res, $Val extends GeneralItem>
                 ? _value.unit
                 : unit // ignore: cast_nullable_to_non_nullable
                       as String,
-            deleted: null == deleted
-                ? _value.deleted
-                : deleted // ignore: cast_nullable_to_non_nullable
-                      as bool,
-            deletedAt: freezed == deletedAt
-                ? _value.deletedAt
-                : deletedAt // ignore: cast_nullable_to_non_nullable
-                      as DateTime?,
           )
           as $Val,
     );
@@ -103,33 +85,27 @@ class _$GeneralItemCopyWithImpl<$Res, $Val extends GeneralItem>
 }
 
 /// @nodoc
-abstract class _$$GeneralItemImplCopyWith<$Res>
-    implements $GeneralItemCopyWith<$Res> {
-  factory _$$GeneralItemImplCopyWith(
-    _$GeneralItemImpl value,
-    $Res Function(_$GeneralItemImpl) then,
-  ) = __$$GeneralItemImplCopyWithImpl<$Res>;
+abstract class _$$QuickAddItemImplCopyWith<$Res>
+    implements $QuickAddItemCopyWith<$Res> {
+  factory _$$QuickAddItemImplCopyWith(
+    _$QuickAddItemImpl value,
+    $Res Function(_$QuickAddItemImpl) then,
+  ) = __$$QuickAddItemImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call({
-    String catalogId,
-    double amount,
-    String unit,
-    bool deleted,
-    DateTime? deletedAt,
-  });
+  $Res call({String catalogId, double amount, String unit});
 }
 
 /// @nodoc
-class __$$GeneralItemImplCopyWithImpl<$Res>
-    extends _$GeneralItemCopyWithImpl<$Res, _$GeneralItemImpl>
-    implements _$$GeneralItemImplCopyWith<$Res> {
-  __$$GeneralItemImplCopyWithImpl(
-    _$GeneralItemImpl _value,
-    $Res Function(_$GeneralItemImpl) _then,
+class __$$QuickAddItemImplCopyWithImpl<$Res>
+    extends _$QuickAddItemCopyWithImpl<$Res, _$QuickAddItemImpl>
+    implements _$$QuickAddItemImplCopyWith<$Res> {
+  __$$QuickAddItemImplCopyWithImpl(
+    _$QuickAddItemImpl _value,
+    $Res Function(_$QuickAddItemImpl) _then,
   ) : super(_value, _then);
 
-  /// Create a copy of GeneralItem
+  /// Create a copy of QuickAddItem
   /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
@@ -137,11 +113,9 @@ class __$$GeneralItemImplCopyWithImpl<$Res>
     Object? catalogId = null,
     Object? amount = null,
     Object? unit = null,
-    Object? deleted = null,
-    Object? deletedAt = freezed,
   }) {
     return _then(
-      _$GeneralItemImpl(
+      _$QuickAddItemImpl(
         catalogId: null == catalogId
             ? _value.catalogId
             : catalogId // ignore: cast_nullable_to_non_nullable
@@ -154,14 +128,6 @@ class __$$GeneralItemImplCopyWithImpl<$Res>
             ? _value.unit
             : unit // ignore: cast_nullable_to_non_nullable
                   as String,
-        deleted: null == deleted
-            ? _value.deleted
-            : deleted // ignore: cast_nullable_to_non_nullable
-                  as bool,
-        deletedAt: freezed == deletedAt
-            ? _value.deletedAt
-            : deletedAt // ignore: cast_nullable_to_non_nullable
-                  as DateTime?,
       ),
     );
   }
@@ -169,17 +135,15 @@ class __$$GeneralItemImplCopyWithImpl<$Res>
 
 /// @nodoc
 @JsonSerializable()
-class _$GeneralItemImpl extends _GeneralItem {
-  const _$GeneralItemImpl({
+class _$QuickAddItemImpl implements _QuickAddItem {
+  const _$QuickAddItemImpl({
     required this.catalogId,
     this.amount = 1.0,
     this.unit = '',
-    this.deleted = false,
-    this.deletedAt,
-  }) : super._();
+  });
 
-  factory _$GeneralItemImpl.fromJson(Map<String, dynamic> json) =>
-      _$$GeneralItemImplFromJson(json);
+  factory _$QuickAddItemImpl.fromJson(Map<String, dynamic> json) =>
+      _$$QuickAddItemImplFromJson(json);
 
   @override
   final String catalogId;
@@ -189,62 +153,50 @@ class _$GeneralItemImpl extends _GeneralItem {
   @override
   @JsonKey()
   final String unit;
-  @override
-  @JsonKey()
-  final bool deleted;
-  @override
-  final DateTime? deletedAt;
 
   @override
   String toString() {
-    return 'GeneralItem(catalogId: $catalogId, amount: $amount, unit: $unit, deleted: $deleted, deletedAt: $deletedAt)';
+    return 'QuickAddItem(catalogId: $catalogId, amount: $amount, unit: $unit)';
   }
 
   @override
   bool operator ==(Object other) {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
-            other is _$GeneralItemImpl &&
+            other is _$QuickAddItemImpl &&
             (identical(other.catalogId, catalogId) ||
                 other.catalogId == catalogId) &&
             (identical(other.amount, amount) || other.amount == amount) &&
-            (identical(other.unit, unit) || other.unit == unit) &&
-            (identical(other.deleted, deleted) || other.deleted == deleted) &&
-            (identical(other.deletedAt, deletedAt) ||
-                other.deletedAt == deletedAt));
+            (identical(other.unit, unit) || other.unit == unit));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode =>
-      Object.hash(runtimeType, catalogId, amount, unit, deleted, deletedAt);
+  int get hashCode => Object.hash(runtimeType, catalogId, amount, unit);
 
-  /// Create a copy of GeneralItem
+  /// Create a copy of QuickAddItem
   /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
   @pragma('vm:prefer-inline')
-  _$$GeneralItemImplCopyWith<_$GeneralItemImpl> get copyWith =>
-      __$$GeneralItemImplCopyWithImpl<_$GeneralItemImpl>(this, _$identity);
+  _$$QuickAddItemImplCopyWith<_$QuickAddItemImpl> get copyWith =>
+      __$$QuickAddItemImplCopyWithImpl<_$QuickAddItemImpl>(this, _$identity);
 
   @override
   Map<String, dynamic> toJson() {
-    return _$$GeneralItemImplToJson(this);
+    return _$$QuickAddItemImplToJson(this);
   }
 }
 
-abstract class _GeneralItem extends GeneralItem {
-  const factory _GeneralItem({
+abstract class _QuickAddItem implements QuickAddItem {
+  const factory _QuickAddItem({
     required final String catalogId,
     final double amount,
     final String unit,
-    final bool deleted,
-    final DateTime? deletedAt,
-  }) = _$GeneralItemImpl;
-  const _GeneralItem._() : super._();
+  }) = _$QuickAddItemImpl;
 
-  factory _GeneralItem.fromJson(Map<String, dynamic> json) =
-      _$GeneralItemImpl.fromJson;
+  factory _QuickAddItem.fromJson(Map<String, dynamic> json) =
+      _$QuickAddItemImpl.fromJson;
 
   @override
   String get catalogId;
@@ -252,15 +204,11 @@ abstract class _GeneralItem extends GeneralItem {
   double get amount;
   @override
   String get unit;
-  @override
-  bool get deleted;
-  @override
-  DateTime? get deletedAt;
 
-  /// Create a copy of GeneralItem
+  /// Create a copy of QuickAddItem
   /// with the given fields replaced by the non-null parameter values.
   @override
   @JsonKey(includeFromJson: false, includeToJson: false)
-  _$$GeneralItemImplCopyWith<_$GeneralItemImpl> get copyWith =>
+  _$$QuickAddItemImplCopyWith<_$QuickAddItemImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }

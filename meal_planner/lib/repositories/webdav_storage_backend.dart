@@ -30,6 +30,7 @@ class WebDavStorageBackend extends SyncableStorageBackend {
 
   late final webdav.Client _client;
   bool _prefixEnsured = false;
+  final Set<String> _ensuredDirs = {};
 
   WebDavStorageBackend({
     required this.baseUrl,
@@ -91,26 +92,83 @@ class WebDavStorageBackend extends SyncableStorageBackend {
   Future<void> write(String key, String value) async {
     await _ensurePrefix();
     await _wrap(() async {
+      final dir = _parentDir(key);
+      if (dir != null) await _ensureDir(dir);
       final data = Uint8List.fromList(utf8.encode(value));
       await _client.write(_path(key), data);
     }, 'Write $key');
   }
 
   @override
-  Future<List<String>> listKeys() async {
+  Future<void> delete(String key) async {
+    await _wrap(() async {
+      try {
+        await _client.remove(_path(key));
+      } catch (e) {
+        if (_isNotFound(e)) return;
+        rethrow;
+      }
+    }, 'Delete $key');
+  }
+
+  @override
+  Future<List<String>> list(String dir) async {
     return _wrap<List<String>>(() async {
       try {
-        final entries = await _client.readDir(pathPrefix);
+        final entries = await _client.readDir(_path(dir));
         return entries
             .where((f) => f.isDir != true)
             .map((f) => f.name ?? '')
-            .where((n) => n.endsWith('.json') && !n.endsWith('.backup'))
+            .where(_isDataFile)
             .toList();
       } catch (e) {
         if (_isNotFound(e)) return <String>[];
         rethrow;
       }
-    }, 'List');
+    }, 'List $dir');
+  }
+
+  @override
+  Future<List<String>> listKeys() async {
+    return _wrap<List<String>>(() => _listRecursive(''), 'List');
+  }
+
+  /// Walks the prefix tree and returns keys relative to [pathPrefix].
+  Future<List<String>> _listRecursive(String relDir) async {
+    final List<dynamic> entries;
+    try {
+      entries = await _client.readDir(relDir.isEmpty ? pathPrefix : _path(relDir));
+    } catch (e) {
+      if (_isNotFound(e)) return <String>[];
+      rethrow;
+    }
+    final keys = <String>[];
+    for (final entry in entries) {
+      final name = entry.name as String? ?? '';
+      if (name.isEmpty) continue;
+      final rel = relDir.isEmpty ? name : '$relDir/$name';
+      if (entry.isDir == true) {
+        keys.addAll(await _listRecursive(rel));
+      } else if (_isDataFile(name)) {
+        keys.add(rel);
+      }
+    }
+    return keys;
+  }
+
+  String? _parentDir(String key) {
+    final idx = key.lastIndexOf('/');
+    return idx <= 0 ? null : key.substring(0, idx);
+  }
+
+  Future<void> _ensureDir(String dir) async {
+    if (_ensuredDirs.contains(dir)) return;
+    try {
+      await _client.mkdirAll(_path(dir));
+    } catch (_) {
+      // Already exists on most servers; real failures surface on write.
+    }
+    _ensuredDirs.add(dir);
   }
 
   @override
@@ -146,6 +204,11 @@ class WebDavStorageBackend extends SyncableStorageBackend {
   }
 
   bool _isNotFound(Object e) => _extractStatusCode(e) == 404;
+
+  static bool _isDataFile(String name) =>
+      name.endsWith('.json') &&
+      !name.endsWith('.backup') &&
+      !name.endsWith('.tmp');
 
   /// Best-effort extraction of HTTP status code from a thrown error.
   /// webdav_client wraps dio exceptions; their string form contains

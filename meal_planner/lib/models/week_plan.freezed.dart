@@ -26,21 +26,25 @@ mixin _$WeekPlan {
   Map<String, DayPlan> get days => throw _privateConstructorUsedError;
 
   /// Ad-hoc shopping items added via quick-add. Scoped to this week only.
-  List<ShoppingItem> get quickAdds => throw _privateConstructorUsedError;
+  List<QuickAddItem> get quickAdds => throw _privateConstructorUsedError;
 
-  /// IDs of GeneralItems hidden from this week's shopping list.
+  /// Catalog ids of general items hidden from this week's shopping list.
   /// Does not affect the underlying general items or recipe ingredients.
   Set<String> get excludedGeneralIds => throw _privateConstructorUsedError;
 
-  /// Shopping-list items marked as bought (keyed by "name|unit", lowercase).
-  Set<String> get checkedKeys => throw _privateConstructorUsedError;
+  /// Catalog ids of shopping lines marked as bought.
+  Set<String> get checkedIds => throw _privateConstructorUsedError;
 
-  /// Shopping-list items marked as not available (keyed by "name|unit").
-  Set<String> get unavailableKeys => throw _privateConstructorUsedError;
+  /// Catalog ids of shopping lines marked as not available.
+  Set<String> get unavailableIds => throw _privateConstructorUsedError;
 
-  /// Per-week amount override for shopping items (keyed by "name|unit").
-  /// Replaces the derived amount; never mutates the recipe or general item.
-  Map<String, double> get amountOverrides => throw _privateConstructorUsedError;
+  /// Per-week amount override for a shopping line, keyed by catalog id.
+  /// Replaces the derived amounts entirely (one amount in one unit);
+  /// never mutates the recipe, general item or catalog entry.
+  Map<String, ShoppingAmount> get amountOverrides =>
+      throw _privateConstructorUsedError;
+  bool get deleted => throw _privateConstructorUsedError;
+  DateTime? get deletedAt => throw _privateConstructorUsedError;
 
   /// Serializes this WeekPlan to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -60,11 +64,13 @@ abstract class $WeekPlanCopyWith<$Res> {
   $Res call({
     String weekKey,
     Map<String, DayPlan> days,
-    List<ShoppingItem> quickAdds,
+    List<QuickAddItem> quickAdds,
     Set<String> excludedGeneralIds,
-    Set<String> checkedKeys,
-    Set<String> unavailableKeys,
-    Map<String, double> amountOverrides,
+    Set<String> checkedIds,
+    Set<String> unavailableIds,
+    Map<String, ShoppingAmount> amountOverrides,
+    bool deleted,
+    DateTime? deletedAt,
   });
 }
 
@@ -87,9 +93,11 @@ class _$WeekPlanCopyWithImpl<$Res, $Val extends WeekPlan>
     Object? days = null,
     Object? quickAdds = null,
     Object? excludedGeneralIds = null,
-    Object? checkedKeys = null,
-    Object? unavailableKeys = null,
+    Object? checkedIds = null,
+    Object? unavailableIds = null,
     Object? amountOverrides = null,
+    Object? deleted = null,
+    Object? deletedAt = freezed,
   }) {
     return _then(
       _value.copyWith(
@@ -104,23 +112,31 @@ class _$WeekPlanCopyWithImpl<$Res, $Val extends WeekPlan>
             quickAdds: null == quickAdds
                 ? _value.quickAdds
                 : quickAdds // ignore: cast_nullable_to_non_nullable
-                      as List<ShoppingItem>,
+                      as List<QuickAddItem>,
             excludedGeneralIds: null == excludedGeneralIds
                 ? _value.excludedGeneralIds
                 : excludedGeneralIds // ignore: cast_nullable_to_non_nullable
                       as Set<String>,
-            checkedKeys: null == checkedKeys
-                ? _value.checkedKeys
-                : checkedKeys // ignore: cast_nullable_to_non_nullable
+            checkedIds: null == checkedIds
+                ? _value.checkedIds
+                : checkedIds // ignore: cast_nullable_to_non_nullable
                       as Set<String>,
-            unavailableKeys: null == unavailableKeys
-                ? _value.unavailableKeys
-                : unavailableKeys // ignore: cast_nullable_to_non_nullable
+            unavailableIds: null == unavailableIds
+                ? _value.unavailableIds
+                : unavailableIds // ignore: cast_nullable_to_non_nullable
                       as Set<String>,
             amountOverrides: null == amountOverrides
                 ? _value.amountOverrides
                 : amountOverrides // ignore: cast_nullable_to_non_nullable
-                      as Map<String, double>,
+                      as Map<String, ShoppingAmount>,
+            deleted: null == deleted
+                ? _value.deleted
+                : deleted // ignore: cast_nullable_to_non_nullable
+                      as bool,
+            deletedAt: freezed == deletedAt
+                ? _value.deletedAt
+                : deletedAt // ignore: cast_nullable_to_non_nullable
+                      as DateTime?,
           )
           as $Val,
     );
@@ -139,11 +155,13 @@ abstract class _$$WeekPlanImplCopyWith<$Res>
   $Res call({
     String weekKey,
     Map<String, DayPlan> days,
-    List<ShoppingItem> quickAdds,
+    List<QuickAddItem> quickAdds,
     Set<String> excludedGeneralIds,
-    Set<String> checkedKeys,
-    Set<String> unavailableKeys,
-    Map<String, double> amountOverrides,
+    Set<String> checkedIds,
+    Set<String> unavailableIds,
+    Map<String, ShoppingAmount> amountOverrides,
+    bool deleted,
+    DateTime? deletedAt,
   });
 }
 
@@ -165,9 +183,11 @@ class __$$WeekPlanImplCopyWithImpl<$Res>
     Object? days = null,
     Object? quickAdds = null,
     Object? excludedGeneralIds = null,
-    Object? checkedKeys = null,
-    Object? unavailableKeys = null,
+    Object? checkedIds = null,
+    Object? unavailableIds = null,
     Object? amountOverrides = null,
+    Object? deleted = null,
+    Object? deletedAt = freezed,
   }) {
     return _then(
       _$WeekPlanImpl(
@@ -182,23 +202,31 @@ class __$$WeekPlanImplCopyWithImpl<$Res>
         quickAdds: null == quickAdds
             ? _value._quickAdds
             : quickAdds // ignore: cast_nullable_to_non_nullable
-                  as List<ShoppingItem>,
+                  as List<QuickAddItem>,
         excludedGeneralIds: null == excludedGeneralIds
             ? _value._excludedGeneralIds
             : excludedGeneralIds // ignore: cast_nullable_to_non_nullable
                   as Set<String>,
-        checkedKeys: null == checkedKeys
-            ? _value._checkedKeys
-            : checkedKeys // ignore: cast_nullable_to_non_nullable
+        checkedIds: null == checkedIds
+            ? _value._checkedIds
+            : checkedIds // ignore: cast_nullable_to_non_nullable
                   as Set<String>,
-        unavailableKeys: null == unavailableKeys
-            ? _value._unavailableKeys
-            : unavailableKeys // ignore: cast_nullable_to_non_nullable
+        unavailableIds: null == unavailableIds
+            ? _value._unavailableIds
+            : unavailableIds // ignore: cast_nullable_to_non_nullable
                   as Set<String>,
         amountOverrides: null == amountOverrides
             ? _value._amountOverrides
             : amountOverrides // ignore: cast_nullable_to_non_nullable
-                  as Map<String, double>,
+                  as Map<String, ShoppingAmount>,
+        deleted: null == deleted
+            ? _value.deleted
+            : deleted // ignore: cast_nullable_to_non_nullable
+                  as bool,
+        deletedAt: freezed == deletedAt
+            ? _value.deletedAt
+            : deletedAt // ignore: cast_nullable_to_non_nullable
+                  as DateTime?,
       ),
     );
   }
@@ -210,16 +238,19 @@ class _$WeekPlanImpl implements _WeekPlan {
   const _$WeekPlanImpl({
     required this.weekKey,
     final Map<String, DayPlan> days = const {},
-    final List<ShoppingItem> quickAdds = const <ShoppingItem>[],
+    final List<QuickAddItem> quickAdds = const <QuickAddItem>[],
     final Set<String> excludedGeneralIds = const <String>{},
-    final Set<String> checkedKeys = const <String>{},
-    final Set<String> unavailableKeys = const <String>{},
-    final Map<String, double> amountOverrides = const <String, double>{},
+    final Set<String> checkedIds = const <String>{},
+    final Set<String> unavailableIds = const <String>{},
+    final Map<String, ShoppingAmount> amountOverrides =
+        const <String, ShoppingAmount>{},
+    this.deleted = false,
+    this.deletedAt,
   }) : _days = days,
        _quickAdds = quickAdds,
        _excludedGeneralIds = excludedGeneralIds,
-       _checkedKeys = checkedKeys,
-       _unavailableKeys = unavailableKeys,
+       _checkedIds = checkedIds,
+       _unavailableIds = unavailableIds,
        _amountOverrides = amountOverrides;
 
   factory _$WeekPlanImpl.fromJson(Map<String, dynamic> json) =>
@@ -238,22 +269,22 @@ class _$WeekPlanImpl implements _WeekPlan {
   }
 
   /// Ad-hoc shopping items added via quick-add. Scoped to this week only.
-  final List<ShoppingItem> _quickAdds;
+  final List<QuickAddItem> _quickAdds;
 
   /// Ad-hoc shopping items added via quick-add. Scoped to this week only.
   @override
   @JsonKey()
-  List<ShoppingItem> get quickAdds {
+  List<QuickAddItem> get quickAdds {
     if (_quickAdds is EqualUnmodifiableListView) return _quickAdds;
     // ignore: implicit_dynamic_type
     return EqualUnmodifiableListView(_quickAdds);
   }
 
-  /// IDs of GeneralItems hidden from this week's shopping list.
+  /// Catalog ids of general items hidden from this week's shopping list.
   /// Does not affect the underlying general items or recipe ingredients.
   final Set<String> _excludedGeneralIds;
 
-  /// IDs of GeneralItems hidden from this week's shopping list.
+  /// Catalog ids of general items hidden from this week's shopping list.
   /// Does not affect the underlying general items or recipe ingredients.
   @override
   @JsonKey()
@@ -264,47 +295,55 @@ class _$WeekPlanImpl implements _WeekPlan {
     return EqualUnmodifiableSetView(_excludedGeneralIds);
   }
 
-  /// Shopping-list items marked as bought (keyed by "name|unit", lowercase).
-  final Set<String> _checkedKeys;
+  /// Catalog ids of shopping lines marked as bought.
+  final Set<String> _checkedIds;
 
-  /// Shopping-list items marked as bought (keyed by "name|unit", lowercase).
+  /// Catalog ids of shopping lines marked as bought.
   @override
   @JsonKey()
-  Set<String> get checkedKeys {
-    if (_checkedKeys is EqualUnmodifiableSetView) return _checkedKeys;
+  Set<String> get checkedIds {
+    if (_checkedIds is EqualUnmodifiableSetView) return _checkedIds;
     // ignore: implicit_dynamic_type
-    return EqualUnmodifiableSetView(_checkedKeys);
+    return EqualUnmodifiableSetView(_checkedIds);
   }
 
-  /// Shopping-list items marked as not available (keyed by "name|unit").
-  final Set<String> _unavailableKeys;
+  /// Catalog ids of shopping lines marked as not available.
+  final Set<String> _unavailableIds;
 
-  /// Shopping-list items marked as not available (keyed by "name|unit").
+  /// Catalog ids of shopping lines marked as not available.
   @override
   @JsonKey()
-  Set<String> get unavailableKeys {
-    if (_unavailableKeys is EqualUnmodifiableSetView) return _unavailableKeys;
+  Set<String> get unavailableIds {
+    if (_unavailableIds is EqualUnmodifiableSetView) return _unavailableIds;
     // ignore: implicit_dynamic_type
-    return EqualUnmodifiableSetView(_unavailableKeys);
+    return EqualUnmodifiableSetView(_unavailableIds);
   }
 
-  /// Per-week amount override for shopping items (keyed by "name|unit").
-  /// Replaces the derived amount; never mutates the recipe or general item.
-  final Map<String, double> _amountOverrides;
+  /// Per-week amount override for a shopping line, keyed by catalog id.
+  /// Replaces the derived amounts entirely (one amount in one unit);
+  /// never mutates the recipe, general item or catalog entry.
+  final Map<String, ShoppingAmount> _amountOverrides;
 
-  /// Per-week amount override for shopping items (keyed by "name|unit").
-  /// Replaces the derived amount; never mutates the recipe or general item.
+  /// Per-week amount override for a shopping line, keyed by catalog id.
+  /// Replaces the derived amounts entirely (one amount in one unit);
+  /// never mutates the recipe, general item or catalog entry.
   @override
   @JsonKey()
-  Map<String, double> get amountOverrides {
+  Map<String, ShoppingAmount> get amountOverrides {
     if (_amountOverrides is EqualUnmodifiableMapView) return _amountOverrides;
     // ignore: implicit_dynamic_type
     return EqualUnmodifiableMapView(_amountOverrides);
   }
 
   @override
+  @JsonKey()
+  final bool deleted;
+  @override
+  final DateTime? deletedAt;
+
+  @override
   String toString() {
-    return 'WeekPlan(weekKey: $weekKey, days: $days, quickAdds: $quickAdds, excludedGeneralIds: $excludedGeneralIds, checkedKeys: $checkedKeys, unavailableKeys: $unavailableKeys, amountOverrides: $amountOverrides)';
+    return 'WeekPlan(weekKey: $weekKey, days: $days, quickAdds: $quickAdds, excludedGeneralIds: $excludedGeneralIds, checkedIds: $checkedIds, unavailableIds: $unavailableIds, amountOverrides: $amountOverrides, deleted: $deleted, deletedAt: $deletedAt)';
   }
 
   @override
@@ -323,17 +362,20 @@ class _$WeekPlanImpl implements _WeekPlan {
               _excludedGeneralIds,
             ) &&
             const DeepCollectionEquality().equals(
-              other._checkedKeys,
-              _checkedKeys,
+              other._checkedIds,
+              _checkedIds,
             ) &&
             const DeepCollectionEquality().equals(
-              other._unavailableKeys,
-              _unavailableKeys,
+              other._unavailableIds,
+              _unavailableIds,
             ) &&
             const DeepCollectionEquality().equals(
               other._amountOverrides,
               _amountOverrides,
-            ));
+            ) &&
+            (identical(other.deleted, deleted) || other.deleted == deleted) &&
+            (identical(other.deletedAt, deletedAt) ||
+                other.deletedAt == deletedAt));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -344,9 +386,11 @@ class _$WeekPlanImpl implements _WeekPlan {
     const DeepCollectionEquality().hash(_days),
     const DeepCollectionEquality().hash(_quickAdds),
     const DeepCollectionEquality().hash(_excludedGeneralIds),
-    const DeepCollectionEquality().hash(_checkedKeys),
-    const DeepCollectionEquality().hash(_unavailableKeys),
+    const DeepCollectionEquality().hash(_checkedIds),
+    const DeepCollectionEquality().hash(_unavailableIds),
     const DeepCollectionEquality().hash(_amountOverrides),
+    deleted,
+    deletedAt,
   );
 
   /// Create a copy of WeekPlan
@@ -367,11 +411,13 @@ abstract class _WeekPlan implements WeekPlan {
   const factory _WeekPlan({
     required final String weekKey,
     final Map<String, DayPlan> days,
-    final List<ShoppingItem> quickAdds,
+    final List<QuickAddItem> quickAdds,
     final Set<String> excludedGeneralIds,
-    final Set<String> checkedKeys,
-    final Set<String> unavailableKeys,
-    final Map<String, double> amountOverrides,
+    final Set<String> checkedIds,
+    final Set<String> unavailableIds,
+    final Map<String, ShoppingAmount> amountOverrides,
+    final bool deleted,
+    final DateTime? deletedAt,
   }) = _$WeekPlanImpl;
 
   factory _WeekPlan.fromJson(Map<String, dynamic> json) =
@@ -385,25 +431,30 @@ abstract class _WeekPlan implements WeekPlan {
 
   /// Ad-hoc shopping items added via quick-add. Scoped to this week only.
   @override
-  List<ShoppingItem> get quickAdds;
+  List<QuickAddItem> get quickAdds;
 
-  /// IDs of GeneralItems hidden from this week's shopping list.
+  /// Catalog ids of general items hidden from this week's shopping list.
   /// Does not affect the underlying general items or recipe ingredients.
   @override
   Set<String> get excludedGeneralIds;
 
-  /// Shopping-list items marked as bought (keyed by "name|unit", lowercase).
+  /// Catalog ids of shopping lines marked as bought.
   @override
-  Set<String> get checkedKeys;
+  Set<String> get checkedIds;
 
-  /// Shopping-list items marked as not available (keyed by "name|unit").
+  /// Catalog ids of shopping lines marked as not available.
   @override
-  Set<String> get unavailableKeys;
+  Set<String> get unavailableIds;
 
-  /// Per-week amount override for shopping items (keyed by "name|unit").
-  /// Replaces the derived amount; never mutates the recipe or general item.
+  /// Per-week amount override for a shopping line, keyed by catalog id.
+  /// Replaces the derived amounts entirely (one amount in one unit);
+  /// never mutates the recipe, general item or catalog entry.
   @override
-  Map<String, double> get amountOverrides;
+  Map<String, ShoppingAmount> get amountOverrides;
+  @override
+  bool get deleted;
+  @override
+  DateTime? get deletedAt;
 
   /// Create a copy of WeekPlan
   /// with the given fields replaced by the non-null parameter values.

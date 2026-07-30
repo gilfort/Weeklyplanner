@@ -16,29 +16,34 @@ _$WeekPlanImpl _$$WeekPlanImplFromJson(Map<String, dynamic> json) =>
           const {},
       quickAdds:
           (json['quickAdds'] as List<dynamic>?)
-              ?.map((e) => ShoppingItem.fromJson(e as Map<String, dynamic>))
+              ?.map((e) => QuickAddItem.fromJson(e as Map<String, dynamic>))
               .toList() ??
-          const <ShoppingItem>[],
+          const <QuickAddItem>[],
       excludedGeneralIds:
           (json['excludedGeneralIds'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toSet() ??
           const <String>{},
-      checkedKeys:
-          (json['checkedKeys'] as List<dynamic>?)
+      checkedIds:
+          (json['checkedIds'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toSet() ??
           const <String>{},
-      unavailableKeys:
-          (json['unavailableKeys'] as List<dynamic>?)
+      unavailableIds:
+          (json['unavailableIds'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toSet() ??
           const <String>{},
       amountOverrides:
           (json['amountOverrides'] as Map<String, dynamic>?)?.map(
-            (k, e) => MapEntry(k, (e as num).toDouble()),
+            (k, e) =>
+                MapEntry(k, ShoppingAmount.fromJson(e as Map<String, dynamic>)),
           ) ??
-          const <String, double>{},
+          const <String, ShoppingAmount>{},
+      deleted: json['deleted'] as bool? ?? false,
+      deletedAt: json['deletedAt'] == null
+          ? null
+          : DateTime.parse(json['deletedAt'] as String),
     );
 
 Map<String, dynamic> _$$WeekPlanImplToJson(_$WeekPlanImpl instance) =>
@@ -47,7 +52,11 @@ Map<String, dynamic> _$$WeekPlanImplToJson(_$WeekPlanImpl instance) =>
       'days': instance.days.map((k, e) => MapEntry(k, e.toJson())),
       'quickAdds': instance.quickAdds.map((e) => e.toJson()).toList(),
       'excludedGeneralIds': instance.excludedGeneralIds.toList(),
-      'checkedKeys': instance.checkedKeys.toList(),
-      'unavailableKeys': instance.unavailableKeys.toList(),
-      'amountOverrides': instance.amountOverrides,
+      'checkedIds': instance.checkedIds.toList(),
+      'unavailableIds': instance.unavailableIds.toList(),
+      'amountOverrides': instance.amountOverrides.map(
+        (k, e) => MapEntry(k, e.toJson()),
+      ),
+      'deleted': instance.deleted,
+      'deletedAt': instance.deletedAt?.toIso8601String(),
     };

@@ -11,20 +11,8 @@ void main() {
         description: 'Klassiker',
         servings: 4,
         ingredients: [
-          Ingredient(
-            id: 'i1',
-            name: 'Spaghetti',
-            amount: 500,
-            unit: 'g',
-            category: 'Nudeln',
-          ),
-          Ingredient(
-            id: 'i2',
-            name: 'Hackfleisch',
-            amount: 400,
-            unit: 'g',
-            category: 'Fleisch',
-          ),
+          Ingredient(catalogId: 'c-spaghetti', amount: 500, unit: 'g'),
+          Ingredient(catalogId: 'c-hack', amount: 400, unit: 'g'),
         ],
         tags: ['italienisch', 'schnell'],
       );
@@ -38,6 +26,16 @@ void main() {
         jsonEncode(restored.toJson()),
         equals(jsonEncode(recipe.toJson())),
       );
+    });
+
+    test('carries soft-delete markers', () {
+      final at = DateTime.utc(2026, 3, 1, 12);
+      final recipe =
+          Recipe(id: 'r1', name: 'Pasta', deleted: true, deletedAt: at);
+
+      final restored = Recipe.fromJson(recipe.toJson());
+      expect(restored.deleted, isTrue);
+      expect(restored.deletedAt, at);
     });
   });
 
@@ -61,38 +59,74 @@ void main() {
       expect(restored, equals(plan));
       expect(jsonEncode(restored.toJson()), equals(jsonEncode(plan.toJson())));
     });
+
+    test('keeps shopping state keyed by catalog id', () {
+      final plan = WeekPlan(
+        weekKey: '2025-W14',
+        checkedIds: {'c-milch'},
+        unavailableIds: {'c-hefe'},
+        excludedGeneralIds: {'c-seife'},
+        quickAdds: [QuickAddItem(catalogId: 'c-chips', amount: 2)],
+        amountOverrides: {
+          'c-milch': ShoppingAmount(amount: 3, unit: 'l'),
+        },
+      );
+
+      final restored = WeekPlan.fromJson(plan.toJson());
+      expect(restored, equals(plan));
+      expect(restored.amountOverrides['c-milch']?.unit, 'l');
+      expect(restored.quickAdds.single.catalogId, 'c-chips');
+    });
   });
 
   group('ShoppingItem JSON roundtrip', () {
-    test('preserves source enum', () {
+    test('preserves source enum and per-unit amounts', () {
       final item = ShoppingItem(
-        id: 's1',
+        catalogId: 'c-milch',
         name: 'Milch',
-        amount: 1,
-        unit: 'l',
         category: 'Milchprodukte',
-        isChecked: false,
+        amounts: [
+          ShoppingAmount(amount: 1, unit: 'l'),
+          ShoppingAmount(amount: 2, unit: 'Packung'),
+        ],
         source: ShoppingSource.recipe,
       );
 
       final restored = ShoppingItem.fromJson(item.toJson());
       expect(restored, equals(item));
       expect(restored.source, ShoppingSource.recipe);
+      expect(restored.amounts.length, 2);
     });
   });
 
   group('GeneralItem JSON roundtrip', () {
     test('fromJson → toJson is stable', () {
       final item = GeneralItem(
-        id: 'g1',
-        name: 'Küchenpapier',
+        catalogId: 'c-kuechenpapier',
         amount: 2,
         unit: 'Rollen',
-        category: 'Haushalt',
       );
 
       final restored = GeneralItem.fromJson(item.toJson());
       expect(restored, equals(item));
+      expect(restored.id, 'c-kuechenpapier');
+    });
+  });
+
+  group('IngredientCatalogEntry', () {
+    test('nameKey normalises case and padding', () {
+      const entry = IngredientCatalogEntry(id: 'c1', name: '  Weizenmehl ');
+      expect(entry.nameKey, 'weizenmehl');
+    });
+
+    test('roundtrips through JSON', () {
+      const entry = IngredientCatalogEntry(
+        id: 'c1',
+        name: 'Mehl',
+        defaultUnit: 'g',
+        defaultCategory: 'Backen',
+      );
+      expect(IngredientCatalogEntry.fromJson(entry.toJson()), equals(entry));
     });
   });
 }

@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:meal_planner/models/models.dart';
+import 'package:meal_planner/providers/ingredient_catalog_provider.dart';
 import 'package:meal_planner/providers/recipe_provider.dart';
 import 'package:meal_planner/screens/recipe_edit_screen.dart';
 import 'package:meal_planner/screens/recipe_list_screen.dart';
@@ -49,7 +50,12 @@ Widget buildRoutedRecipeList({
     ],
   );
   return ProviderScope(
-    overrides: overrides,
+    // The edit screen resolves ingredient names through the catalog, so it
+    // stays on a spinner until the catalog has loaded.
+    overrides: [
+      ingredientCatalogProvider.overrideWith(() => _FakeCatalog(const [])),
+      ...overrides,
+    ],
     child: MaterialApp.router(routerConfig: router),
   );
 }
@@ -155,6 +161,15 @@ void main() {
       expect(find.text('Suppe'), findsOneWidget);
     });
   });
+}
+
+/// A fake catalog that returns data synchronously (no file I/O).
+class _FakeCatalog extends IngredientCatalog {
+  final List<IngredientCatalogEntry> _data;
+  _FakeCatalog(this._data);
+
+  @override
+  Future<List<IngredientCatalogEntry>> build() async => _data;
 }
 
 /// A fake Recipes notifier that returns data synchronously (no file I/O).

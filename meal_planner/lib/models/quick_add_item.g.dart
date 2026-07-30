@@ -1,27 +1,21 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'general_item.dart';
+part of 'quick_add_item.dart';
 
 // **************************************************************************
 // JsonSerializableGenerator
 // **************************************************************************
 
-_$GeneralItemImpl _$$GeneralItemImplFromJson(Map<String, dynamic> json) =>
-    _$GeneralItemImpl(
+_$QuickAddItemImpl _$$QuickAddItemImplFromJson(Map<String, dynamic> json) =>
+    _$QuickAddItemImpl(
       catalogId: json['catalogId'] as String,
       amount: (json['amount'] as num?)?.toDouble() ?? 1.0,
       unit: json['unit'] as String? ?? '',
-      deleted: json['deleted'] as bool? ?? false,
-      deletedAt: json['deletedAt'] == null
-          ? null
-          : DateTime.parse(json['deletedAt'] as String),
     );
 
-Map<String, dynamic> _$$GeneralItemImplToJson(_$GeneralItemImpl instance) =>
+Map<String, dynamic> _$$QuickAddItemImplToJson(_$QuickAddItemImpl instance) =>
     <String, dynamic>{
       'catalogId': instance.catalogId,
       'amount': instance.amount,
       'unit': instance.unit,
-      'deleted': instance.deleted,
-      'deletedAt': instance.deletedAt?.toIso8601String(),
     };

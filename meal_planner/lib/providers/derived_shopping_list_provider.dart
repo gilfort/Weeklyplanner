@@ -1,11 +1,14 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:uuid/uuid.dart';
 
 import '../models/ingredient.dart';
+import '../models/ingredient_catalog_entry.dart';
 import '../models/meal_slot.dart';
 import '../models/recipe.dart';
+import '../models/shopping_amount.dart';
 import '../models/shopping_item.dart';
+import '../models/unit_conversion.dart';
 import 'current_week_provider.dart';
+import 'ingredient_catalog_provider.dart';
 import 'recipe_provider.dart';
 import 'week_plan_provider.dart';
 import 'general_items_provider.dart';
@@ -13,9 +16,12 @@ import 'general_items_provider.dart';
 part 'derived_shopping_list_provider.g.dart';
 
 /// Pure derived provider — no own state.
-/// Aggregates scaled recipe ingredients from the active week plan,
-/// merges general items (minus the ones excluded this week), applies
-/// per-week amount overrides, and appends week-scoped quick-add items.
+///
+/// Every contribution to an ingredient collapses onto one line keyed by its
+/// catalog id: scaled recipe ingredients, the general list (minus what this
+/// week excludes) and the week's quick-adds. Amounts in compatible units are
+/// summed, incompatible ones stay side by side. Per-week overrides replace a
+/// line's amounts entirely.
 @riverpod
 Future<List<ShoppingItem>> derivedShoppingList(
   DerivedShoppingListRef ref,
@@ -25,6 +31,7 @@ Future<List<ShoppingItem>> derivedShoppingList(
   final weekPlan = await ref.watch(weekPlanNotifierProvider(weekKey).future);
   final recipes = await ref.watch(recipesProvider.future);
   final generalItems = await ref.watch(generalItemsProvider.future);
+  final catalog = await ref.watch(catalogByIdProvider.future);
 
   final recipeMap = {for (final r in recipes) r.id: r};
 
@@ -37,85 +44,74 @@ Future<List<ShoppingItem>> derivedShoppingList(
     if (day.snack != null) allSlots.add(day.snack!);
   }
 
-  // Aggregate ingredients: key = "name|unit" → accumulated amount
-  final aggregated = <String, _AggregatedIngredient>{};
+  final lines = <String, _Line>{};
+  _Line lineFor(String catalogId) =>
+      lines.putIfAbsent(catalogId, () => _Line());
 
   for (final slot in allSlots) {
     if (slot.recipeId == null) continue;
     final recipe = recipeMap[slot.recipeId];
     if (recipe == null) continue;
 
-    final servings = slot.servings ?? recipe.servings;
-    final scaled = _scaleIngredients(recipe, servings);
-
-    for (final ing in scaled) {
-      final key = shoppingKey(ing.name, ing.unit);
-      if (aggregated.containsKey(key)) {
-        aggregated[key] = aggregated[key]!.add(ing.amount);
-      } else {
-        aggregated[key] = _AggregatedIngredient(
-          name: ing.name,
-          amount: ing.amount,
-          unit: ing.unit,
-          category: ing.category,
-        );
-      }
+    for (final ing in _scaleIngredients(recipe, slot.servings ?? recipe.servings)) {
+      lineFor(ing.catalogId)
+        ..fromRecipe = true
+        ..amounts.add(ing.amount, ing.unit);
     }
   }
 
-  // Merge general items (skip ones excluded this week).
-  final mergedKeys = <String>{};
   for (final g in generalItems) {
-    if (weekPlan.excludedGeneralIds.contains(g.id)) continue;
-    final key = shoppingKey(g.name, g.unit);
-    if (aggregated.containsKey(key)) {
-      aggregated[key] = aggregated[key]!.add(g.amount, merged: true);
-      mergedKeys.add(key);
-    } else {
-      aggregated[key] = _AggregatedIngredient(
-        name: g.name,
-        amount: g.amount,
-        unit: g.unit,
-        category: g.category.isNotEmpty ? g.category : '',
-        isMerged: false,
-        isGeneral: true,
-      );
-    }
+    if (weekPlan.excludedGeneralIds.contains(g.catalogId)) continue;
+    lineFor(g.catalogId)
+      ..fromGeneral = true
+      ..amounts.add(g.amount, g.unit);
   }
 
-  const uuid = Uuid();
+  for (final q in weekPlan.quickAdds) {
+    lineFor(q.catalogId)
+      ..hasQuickAdd = true
+      ..amounts.add(q.amount, q.unit);
+  }
+
   final overrides = weekPlan.amountOverrides;
 
-  final derived = aggregated.entries.map((e) {
-    final agg = e.value;
-    final ShoppingSource source;
-    if (mergedKeys.contains(e.key)) {
-      source = ShoppingSource.merged;
-    } else if (agg.isGeneral) {
-      source = ShoppingSource.general;
-    } else {
-      source = ShoppingSource.recipe;
-    }
-    final amount = overrides[e.key] ?? agg.amount;
-    return ShoppingItem(
-      id: uuid.v4(),
-      name: agg.name,
-      amount: amount,
-      unit: agg.unit,
-      category: agg.category,
-      source: source,
-    );
-  }).toList();
+  return [
+    for (final entry in lines.entries)
+      _toShoppingItem(
+        entry.key,
+        entry.value,
+        catalog[entry.key],
+        overrides[entry.key],
+      ),
+  ];
+}
 
-  // Append quick-adds (keep stored IDs so edit/delete works on quickAdds list).
-  // Apply amount override if user edited the quick-add from the shopping list.
-  final quickAdds = weekPlan.quickAdds.map((q) {
-    final key = shoppingKey(q.name, q.unit);
-    final amount = overrides[key] ?? q.amount;
-    return q.copyWith(amount: amount);
-  });
+ShoppingItem _toShoppingItem(
+  String catalogId,
+  _Line line,
+  IngredientCatalogEntry? entry,
+  ShoppingAmount? override,
+) {
+  final ShoppingSource source;
+  if (line.fromRecipe && line.fromGeneral) {
+    source = ShoppingSource.merged;
+  } else if (line.fromRecipe) {
+    source = ShoppingSource.recipe;
+  } else {
+    source = ShoppingSource.general;
+  }
 
-  return [...derived, ...quickAdds];
+  return ShoppingItem(
+    catalogId: catalogId,
+    // A missing catalog entry means the entry file has not synced yet; show a
+    // placeholder rather than dropping the line, so nothing silently vanishes
+    // from the list.
+    name: entry?.name ?? 'Unbekannte Zutat',
+    category: entry?.defaultCategory ?? '',
+    amounts: override != null ? [override] : line.amounts.build(),
+    source: source,
+    hasQuickAdd: line.hasQuickAdd,
+  );
 }
 
 List<Ingredient> _scaleIngredients(Recipe recipe, int targetServings) {
@@ -126,30 +122,9 @@ List<Ingredient> _scaleIngredients(Recipe recipe, int targetServings) {
       .toList();
 }
 
-class _AggregatedIngredient {
-  final String name;
-  final double amount;
-  final String unit;
-  final String category;
-  final bool isMerged;
-  final bool isGeneral;
-
-  const _AggregatedIngredient({
-    required this.name,
-    required this.amount,
-    required this.unit,
-    required this.category,
-    this.isMerged = false,
-    this.isGeneral = false,
-  });
-
-  _AggregatedIngredient add(double extra, {bool merged = false}) =>
-      _AggregatedIngredient(
-        name: name,
-        amount: amount + extra,
-        unit: unit,
-        category: category,
-        isMerged: isMerged || merged,
-        isGeneral: isGeneral,
-      );
+class _Line {
+  final amounts = AmountAccumulator();
+  bool fromRecipe = false;
+  bool fromGeneral = false;
+  bool hasQuickAdd = false;
 }

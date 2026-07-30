@@ -27,6 +27,8 @@ mixin _$Recipe {
   int get servings => throw _privateConstructorUsedError;
   List<Ingredient> get ingredients => throw _privateConstructorUsedError;
   List<String> get tags => throw _privateConstructorUsedError;
+  bool get deleted => throw _privateConstructorUsedError;
+  DateTime? get deletedAt => throw _privateConstructorUsedError;
 
   /// Serializes this Recipe to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -49,6 +51,8 @@ abstract class $RecipeCopyWith<$Res> {
     int servings,
     List<Ingredient> ingredients,
     List<String> tags,
+    bool deleted,
+    DateTime? deletedAt,
   });
 }
 
@@ -73,6 +77,8 @@ class _$RecipeCopyWithImpl<$Res, $Val extends Recipe>
     Object? servings = null,
     Object? ingredients = null,
     Object? tags = null,
+    Object? deleted = null,
+    Object? deletedAt = freezed,
   }) {
     return _then(
       _value.copyWith(
@@ -100,6 +106,14 @@ class _$RecipeCopyWithImpl<$Res, $Val extends Recipe>
                 ? _value.tags
                 : tags // ignore: cast_nullable_to_non_nullable
                       as List<String>,
+            deleted: null == deleted
+                ? _value.deleted
+                : deleted // ignore: cast_nullable_to_non_nullable
+                      as bool,
+            deletedAt: freezed == deletedAt
+                ? _value.deletedAt
+                : deletedAt // ignore: cast_nullable_to_non_nullable
+                      as DateTime?,
           )
           as $Val,
     );
@@ -121,6 +135,8 @@ abstract class _$$RecipeImplCopyWith<$Res> implements $RecipeCopyWith<$Res> {
     int servings,
     List<Ingredient> ingredients,
     List<String> tags,
+    bool deleted,
+    DateTime? deletedAt,
   });
 }
 
@@ -144,6 +160,8 @@ class __$$RecipeImplCopyWithImpl<$Res>
     Object? servings = null,
     Object? ingredients = null,
     Object? tags = null,
+    Object? deleted = null,
+    Object? deletedAt = freezed,
   }) {
     return _then(
       _$RecipeImpl(
@@ -171,6 +189,14 @@ class __$$RecipeImplCopyWithImpl<$Res>
             ? _value._tags
             : tags // ignore: cast_nullable_to_non_nullable
                   as List<String>,
+        deleted: null == deleted
+            ? _value.deleted
+            : deleted // ignore: cast_nullable_to_non_nullable
+                  as bool,
+        deletedAt: freezed == deletedAt
+            ? _value.deletedAt
+            : deletedAt // ignore: cast_nullable_to_non_nullable
+                  as DateTime?,
       ),
     );
   }
@@ -186,6 +212,8 @@ class _$RecipeImpl implements _Recipe {
     this.servings = 2,
     final List<Ingredient> ingredients = const [],
     final List<String> tags = const [],
+    this.deleted = false,
+    this.deletedAt,
   }) : _ingredients = ingredients,
        _tags = tags;
 
@@ -221,8 +249,14 @@ class _$RecipeImpl implements _Recipe {
   }
 
   @override
+  @JsonKey()
+  final bool deleted;
+  @override
+  final DateTime? deletedAt;
+
+  @override
   String toString() {
-    return 'Recipe(id: $id, name: $name, description: $description, servings: $servings, ingredients: $ingredients, tags: $tags)';
+    return 'Recipe(id: $id, name: $name, description: $description, servings: $servings, ingredients: $ingredients, tags: $tags, deleted: $deleted, deletedAt: $deletedAt)';
   }
 
   @override
@@ -240,7 +274,10 @@ class _$RecipeImpl implements _Recipe {
               other._ingredients,
               _ingredients,
             ) &&
-            const DeepCollectionEquality().equals(other._tags, _tags));
+            const DeepCollectionEquality().equals(other._tags, _tags) &&
+            (identical(other.deleted, deleted) || other.deleted == deleted) &&
+            (identical(other.deletedAt, deletedAt) ||
+                other.deletedAt == deletedAt));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -253,6 +290,8 @@ class _$RecipeImpl implements _Recipe {
     servings,
     const DeepCollectionEquality().hash(_ingredients),
     const DeepCollectionEquality().hash(_tags),
+    deleted,
+    deletedAt,
   );
 
   /// Create a copy of Recipe
@@ -277,6 +316,8 @@ abstract class _Recipe implements Recipe {
     final int servings,
     final List<Ingredient> ingredients,
     final List<String> tags,
+    final bool deleted,
+    final DateTime? deletedAt,
   }) = _$RecipeImpl;
 
   factory _Recipe.fromJson(Map<String, dynamic> json) = _$RecipeImpl.fromJson;
@@ -293,6 +334,10 @@ abstract class _Recipe implements Recipe {
   List<Ingredient> get ingredients;
   @override
   List<String> get tags;
+  @override
+  bool get deleted;
+  @override
+  DateTime? get deletedAt;
 
   /// Create a copy of Recipe
   /// with the given fields replaced by the non-null parameter values.

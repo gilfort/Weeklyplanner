@@ -13,6 +13,10 @@ _$IngredientCatalogEntryImpl _$$IngredientCatalogEntryImplFromJson(
   name: json['name'] as String,
   defaultUnit: json['defaultUnit'] as String? ?? '',
   defaultCategory: json['defaultCategory'] as String? ?? '',
+  deleted: json['deleted'] as bool? ?? false,
+  deletedAt: json['deletedAt'] == null
+      ? null
+      : DateTime.parse(json['deletedAt'] as String),
 );
 
 Map<String, dynamic> _$$IngredientCatalogEntryImplToJson(
@@ -22,4 +26,6 @@ Map<String, dynamic> _$$IngredientCatalogEntryImplToJson(
   'name': instance.name,
   'defaultUnit': instance.defaultUnit,
   'defaultCategory': instance.defaultCategory,
+  'deleted': instance.deleted,
+  'deletedAt': instance.deletedAt?.toIso8601String(),
 };

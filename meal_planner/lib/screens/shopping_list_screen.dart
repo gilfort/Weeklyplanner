@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:uuid/uuid.dart';
 
 import '../models/models.dart';
 import '../providers/current_week_provider.dart';
@@ -12,8 +11,6 @@ import '../providers/ingredient_catalog_provider.dart';
 import '../providers/unit_provider.dart';
 import '../providers/week_plan_provider.dart';
 import '../theme.dart';
-
-const _uuid = Uuid();
 
 class ShoppingListScreen extends ConsumerWidget {
   const ShoppingListScreen({super.key});
@@ -68,11 +65,8 @@ class _WeeklyShoppingTab extends ConsumerWidget {
       ),
       data: (items) {
         final weekPlan = weekPlanAsync.valueOrNull;
-        final checkedKeys = weekPlan?.checkedKeys ?? const <String>{};
-        final unavailableKeys = weekPlan?.unavailableKeys ?? const <String>{};
-        final quickAddIds = {
-          for (final q in weekPlan?.quickAdds ?? const <ShoppingItem>[]) q.id,
-        };
+        final checkedIds = weekPlan?.checkedIds ?? const <String>{};
+        final unavailableIds = weekPlan?.unavailableIds ?? const <String>{};
 
         if (items.isEmpty) {
           return Column(
@@ -108,8 +102,7 @@ class _WeeklyShoppingTab extends ConsumerWidget {
         final availableItems = <ShoppingItem>[];
         final unavailableItems = <ShoppingItem>[];
         for (final item in items) {
-          final key = shoppingKey(item.name, item.unit);
-          if (unavailableKeys.contains(key)) {
+          if (unavailableIds.contains(item.catalogId)) {
             unavailableItems.add(item);
           } else {
             availableItems.add(item);
@@ -144,11 +137,8 @@ class _WeeklyShoppingTab extends ConsumerWidget {
                       for (final item in grouped[category]!)
                         _ShoppingItemTile(
                           item: item,
-                          isChecked: checkedKeys.contains(
-                            shoppingKey(item.name, item.unit),
-                          ),
+                          isChecked: checkedIds.contains(item.catalogId),
                           isUnavailable: false,
-                          isQuickAdd: quickAddIds.contains(item.id),
                         ),
                     ],
                     if (unavailableItems.isNotEmpty) ...[
@@ -159,11 +149,8 @@ class _WeeklyShoppingTab extends ConsumerWidget {
                       for (final item in unavailableItems)
                         _ShoppingItemTile(
                           item: item,
-                          isChecked: checkedKeys.contains(
-                            shoppingKey(item.name, item.unit),
-                          ),
+                          isChecked: checkedIds.contains(item.catalogId),
                           isUnavailable: true,
-                          isQuickAdd: quickAddIds.contains(item.id),
                         ),
                     ],
                   ],
@@ -243,20 +230,16 @@ class _ShoppingItemTile extends ConsumerWidget {
   final ShoppingItem item;
   final bool isChecked;
   final bool isUnavailable;
-  final bool isQuickAdd;
 
   const _ShoppingItemTile({
     required this.item,
     required this.isChecked,
     this.isUnavailable = false,
-    this.isQuickAdd = false,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final amountStr = item.amount == item.amount.roundToDouble()
-        ? item.amount.toInt().toString()
-        : item.amount.toStringAsFixed(1);
+    final amountStr = formatAmounts(item.amounts);
 
     final muted = isChecked || isUnavailable;
     final textColor = muted ? PaperTheme.checked : PaperTheme.ink;
@@ -280,7 +263,7 @@ class _ShoppingItemTile extends ConsumerWidget {
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 child: Text(
-                  '${item.name}  $amountStr ${item.unit}'.trim(),
+                  '${item.name}  $amountStr'.trim(),
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: textColor,
                         decoration:
@@ -318,11 +301,11 @@ class _ShoppingItemTile extends ConsumerWidget {
       ),
     );
 
-    if (!isQuickAdd) return tile;
+    if (!item.hasQuickAdd) return tile;
 
-    // Quick-add items are swipe-to-delete (week-scoped, ad-hoc).
+    // Lines a quick-add contributed to are swipe-to-delete (week-scoped).
     return Dismissible(
-      key: ValueKey('quickadd-${item.id}'),
+      key: ValueKey('quickadd-${item.catalogId}'),
       direction: DismissDirection.endToStart,
       background: Container(
         color: Colors.red,
@@ -334,7 +317,7 @@ class _ShoppingItemTile extends ConsumerWidget {
         final weekKey = ref.read(currentWeekKeyProvider);
         ref
             .read(weekPlanNotifierProvider(weekKey).notifier)
-            .removeQuickAdd(item.id);
+            .removeQuickAdd(item.catalogId);
       },
       child: tile,
     );
@@ -344,33 +327,29 @@ class _ShoppingItemTile extends ConsumerWidget {
     final weekKey = ref.read(currentWeekKeyProvider);
     await ref
         .read(weekPlanNotifierProvider(weekKey).notifier)
-        .toggleChecked(shoppingKey(item.name, item.unit));
+        .toggleChecked(item.catalogId);
   }
 
   Future<void> _toggleUnavailable(WidgetRef ref) async {
     final weekKey = ref.read(currentWeekKeyProvider);
     await ref
         .read(weekPlanNotifierProvider(weekKey).notifier)
-        .toggleUnavailable(shoppingKey(item.name, item.unit));
+        .toggleUnavailable(item.catalogId);
   }
 
   Future<void> _editAmount(BuildContext context, WidgetRef ref) async {
-    final result = await showDialog<double>(
+    final result = await showDialog<ShoppingAmount>(
       context: context,
       builder: (_) => _EditAmountDialog(item: item),
     );
     if (result == null) return;
 
+    // An override replaces the whole line: one amount in one unit, whatever
+    // the recipes and the general list would have summed up to.
     final weekKey = ref.read(currentWeekKeyProvider);
-    final notifier = ref.read(weekPlanNotifierProvider(weekKey).notifier);
-    final key = shoppingKey(item.name, item.unit);
-
-    if (isQuickAdd) {
-      // Edit stored quick-add directly (keeps identity).
-      await notifier.updateQuickAdd(item.copyWith(amount: result));
-    } else {
-      await notifier.setAmountOverride(key, result);
-    }
+    await ref
+        .read(weekPlanNotifierProvider(weekKey).notifier)
+        .setAmountOverride(item.catalogId, result);
   }
 }
 
@@ -385,20 +364,25 @@ class _EditAmountDialog extends StatefulWidget {
 }
 
 class _EditAmountDialogState extends State<_EditAmountDialog> {
-  late final TextEditingController _ctrl;
+  late final TextEditingController _amountCtrl;
+  late final TextEditingController _unitCtrl;
 
   @override
   void initState() {
     super.initState();
-    final a = widget.item.amount;
-    _ctrl = TextEditingController(
-      text: a == a.roundToDouble() ? a.toInt().toString() : a.toString(),
-    );
+    // Pre-fill with the first derived amount — for the common single-unit
+    // line that is exactly what the user sees on the tile.
+    final first = widget.item.amounts.isEmpty
+        ? const ShoppingAmount(amount: 1)
+        : widget.item.amounts.first;
+    _amountCtrl = TextEditingController(text: formatAmount(first.amount));
+    _unitCtrl = TextEditingController(text: first.unit);
   }
 
   @override
   void dispose() {
-    _ctrl.dispose();
+    _amountCtrl.dispose();
+    _unitCtrl.dispose();
     super.dispose();
   }
 
@@ -406,17 +390,30 @@ class _EditAmountDialogState extends State<_EditAmountDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: Text('${widget.item.name} bearbeiten'),
-      content: TextField(
-        controller: _ctrl,
-        autofocus: true,
-        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-        inputFormatters: [
-          FilteringTextInputFormatter.allow(RegExp(r'[\d.,]')),
+      content: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Expanded(
+            child: TextField(
+              controller: _amountCtrl,
+              autofocus: true,
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'[\d.,]')),
+              ],
+              decoration: const InputDecoration(labelText: 'Menge'),
+            ),
+          ),
+          const SizedBox(width: 8),
+          SizedBox(
+            width: 90,
+            child: TextField(
+              controller: _unitCtrl,
+              decoration: const InputDecoration(labelText: 'Einheit'),
+            ),
+          ),
         ],
-        decoration: InputDecoration(
-          labelText: 'Menge',
-          suffixText: widget.item.unit.isEmpty ? null : widget.item.unit,
-        ),
       ),
       actions: [
         TextButton(
@@ -426,9 +423,11 @@ class _EditAmountDialogState extends State<_EditAmountDialog> {
         FilledButton(
           onPressed: () {
             final parsed =
-                double.tryParse(_ctrl.text.replaceAll(',', '.'));
+                double.tryParse(_amountCtrl.text.replaceAll(',', '.'));
             if (parsed == null) return;
-            Navigator.of(context).pop(parsed);
+            Navigator.of(context).pop(
+              ShoppingAmount(amount: parsed, unit: _unitCtrl.text.trim()),
+            );
           },
           child: const Text('Speichern'),
         ),
@@ -507,20 +506,15 @@ class _QuickAddFieldState extends ConsumerState<_QuickAddField> {
       name = text;
     }
 
-    final item = ShoppingItem(
-      id: _uuid.v4(),
-      name: name,
-      amount: amount,
-      unit: '',
-      category: '',
-      isChecked: false,
-      source: ShoppingSource.general,
-    );
+    // Resolving through the catalog means a quick-added "Milch" lands on the
+    // same line as the milk the week's recipes already need.
+    final catalogId =
+        await ref.read(ingredientCatalogProvider.notifier).resolve(name: name);
 
     final weekKey = ref.read(currentWeekKeyProvider);
     await ref
         .read(weekPlanNotifierProvider(weekKey).notifier)
-        .addQuickAdd(item);
+        .addQuickAdd(QuickAddItem(catalogId: catalogId, amount: amount));
     _controller.clear();
     _focusNode.requestFocus();
   }
@@ -536,6 +530,8 @@ class _GeneralItemsTab extends ConsumerWidget {
     final generalAsync = ref.watch(generalItemsProvider);
     final weekKey = ref.watch(currentWeekKeyProvider);
     final weekPlanAsync = ref.watch(weekPlanNotifierProvider(weekKey));
+    final catalog = ref.watch(catalogByIdProvider).valueOrNull ??
+        const <String, IngredientCatalogEntry>{};
 
     return generalAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -578,7 +574,9 @@ class _GeneralItemsTab extends ConsumerWidget {
                           final item = items[index];
                           return _GeneralItemTile(
                             item: item,
-                            isExcludedThisWeek: excluded.contains(item.id),
+                            entry: catalog[item.catalogId],
+                            isExcludedThisWeek:
+                                excluded.contains(item.catalogId),
                           );
                         },
                       ),
@@ -593,17 +591,20 @@ class _GeneralItemsTab extends ConsumerWidget {
 
 class _GeneralItemTile extends ConsumerWidget {
   final GeneralItem item;
+  final IngredientCatalogEntry? entry;
   final bool isExcludedThisWeek;
   const _GeneralItemTile({
     required this.item,
+    required this.entry,
     required this.isExcludedThisWeek,
   });
 
+  String get _name => entry?.name ?? 'Unbekannte Zutat';
+  String get _category => entry?.defaultCategory ?? '';
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final amountStr = item.amount == item.amount.roundToDouble()
-        ? item.amount.toInt().toString()
-        : item.amount.toStringAsFixed(1);
+    final amountStr = formatAmount(item.amount);
 
     final theme = Theme.of(context);
 
@@ -633,7 +634,7 @@ class _GeneralItemTile extends ConsumerWidget {
           final weekKey = ref.read(currentWeekKeyProvider);
           await ref
               .read(weekPlanNotifierProvider(weekKey).notifier)
-              .toggleExcludedGeneral(item.id);
+              .toggleExcludedGeneral(item.catalogId);
           return false;
         }
         // endToStart → delete with confirmation
@@ -642,7 +643,7 @@ class _GeneralItemTile extends ConsumerWidget {
               builder: (ctx) => AlertDialog(
                 title: const Text('Artikel löschen?'),
                 content: Text(
-                    '„${item.name}" wird dauerhaft aus der generellen Liste entfernt.'),
+                    '„$_name" wird dauerhaft aus der generellen Liste entfernt.'),
                 actions: [
                   TextButton(
                     onPressed: () => Navigator.of(ctx).pop(false),
@@ -668,7 +669,7 @@ class _GeneralItemTile extends ConsumerWidget {
             : null,
         child: ListTile(
           title: Text(
-            item.name,
+            _name,
             style: TextStyle(
               decoration: isExcludedThisWeek ? TextDecoration.lineThrough : null,
               color: isExcludedThisWeek
@@ -682,9 +683,9 @@ class _GeneralItemTile extends ConsumerWidget {
                     .trim()
                 : '$amountStr ${item.unit}'.trim(),
           ),
-          trailing: item.category.isNotEmpty
+          trailing: _category.isNotEmpty
               ? Chip(
-                  label: Text(item.category),
+                  label: Text(_category),
                   visualDensity: VisualDensity.compact,
                   padding: EdgeInsets.zero,
                   labelPadding: const EdgeInsets.symmetric(horizontal: 6),
@@ -697,22 +698,54 @@ class _GeneralItemTile extends ConsumerWidget {
   }
 
   Future<void> _editItem(BuildContext context, WidgetRef ref) async {
-    final result = await showDialog<GeneralItem>(
+    final draft = await showDialog<_GeneralItemDraft>(
       context: context,
-      builder: (_) => _GeneralItemDialog(existing: item),
+      builder: (_) => _GeneralItemDialog(
+        existing: item,
+        existingName: _name,
+        existingCategory: _category,
+      ),
     );
-    if (result != null) {
-      await ref.read(generalItemsProvider.notifier).upsert(result);
-      await ref.read(ingredientCatalogProvider.notifier).learnIngredient(
-            name: result.name,
-            unit: result.unit,
-            category: result.category,
-          );
-      if (result.unit.isNotEmpty) {
-        await ref.read(unitsProvider.notifier).addUnit(result.unit);
-      }
-    }
+    if (draft != null) await _saveGeneralItem(ref, draft);
   }
+}
+
+/// Resolves the typed name to a catalog id and stores the general item under
+/// it. Editing an existing item keeps its id, so a rename does not create a
+/// second article or drop it out of this week's exclusions.
+Future<void> _saveGeneralItem(WidgetRef ref, _GeneralItemDraft draft) async {
+  final catalogId = await ref.read(ingredientCatalogProvider.notifier).resolve(
+        catalogId: draft.catalogId,
+        name: draft.name,
+        unit: draft.unit,
+        category: draft.category,
+      );
+  await ref.read(generalItemsProvider.notifier).upsert(GeneralItem(
+        catalogId: catalogId,
+        amount: draft.amount,
+        unit: draft.unit,
+      ));
+  if (draft.unit.isNotEmpty) {
+    await ref.read(unitsProvider.notifier).addUnit(draft.unit);
+  }
+}
+
+/// What the general-item dialog collects. Turned into a [GeneralItem] only
+/// after the name has been resolved to a catalog id.
+class _GeneralItemDraft {
+  final String? catalogId;
+  final String name;
+  final double amount;
+  final String unit;
+  final String category;
+
+  const _GeneralItemDraft({
+    this.catalogId,
+    required this.name,
+    required this.amount,
+    required this.unit,
+    required this.category,
+  });
 }
 
 // ── FAB is placed in the main screen for adding general items ───────
@@ -729,21 +762,11 @@ class ShoppingListFab extends ConsumerWidget {
   }
 
   Future<void> _addGeneralItem(BuildContext context, WidgetRef ref) async {
-    final result = await showDialog<GeneralItem>(
+    final draft = await showDialog<_GeneralItemDraft>(
       context: context,
       builder: (_) => const _GeneralItemDialog(),
     );
-    if (result != null) {
-      await ref.read(generalItemsProvider.notifier).upsert(result);
-      await ref.read(ingredientCatalogProvider.notifier).learnIngredient(
-            name: result.name,
-            unit: result.unit,
-            category: result.category,
-          );
-      if (result.unit.isNotEmpty) {
-        await ref.read(unitsProvider.notifier).addUnit(result.unit);
-      }
-    }
+    if (draft != null) await _saveGeneralItem(ref, draft);
   }
 }
 
@@ -751,7 +774,14 @@ class ShoppingListFab extends ConsumerWidget {
 
 class _GeneralItemDialog extends ConsumerStatefulWidget {
   final GeneralItem? existing;
-  const _GeneralItemDialog({this.existing});
+  final String existingName;
+  final String existingCategory;
+
+  const _GeneralItemDialog({
+    this.existing,
+    this.existingName = '',
+    this.existingCategory = '',
+  });
 
   @override
   ConsumerState<_GeneralItemDialog> createState() =>
@@ -769,11 +799,11 @@ class _GeneralItemDialogState extends ConsumerState<_GeneralItemDialog> {
   void initState() {
     super.initState();
     final e = widget.existing;
-    _nameCtrl = TextEditingController(text: e?.name ?? '');
+    _nameCtrl = TextEditingController(text: widget.existingName);
     _amountCtrl =
-        TextEditingController(text: e != null ? e.amount.toString() : '1');
+        TextEditingController(text: e != null ? formatAmount(e.amount) : '1');
     _unitCtrl = TextEditingController(text: e?.unit ?? '');
-    _categoryCtrl = TextEditingController(text: e?.category ?? '');
+    _categoryCtrl = TextEditingController(text: widget.existingCategory);
   }
 
   @override
@@ -965,15 +995,13 @@ class _GeneralItemDialogState extends ConsumerState<_GeneralItemDialog> {
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
 
-    final item = GeneralItem(
-      id: widget.existing?.id ?? _uuid.v4(),
+    Navigator.of(context).pop(_GeneralItemDraft(
+      catalogId: widget.existing?.catalogId,
       name: _nameCtrl.text.trim(),
       amount: double.tryParse(_amountCtrl.text.replaceAll(',', '.')) ?? 1,
       unit: _unitCtrl.text.trim(),
       category: _categoryCtrl.text.trim(),
-    );
-
-    Navigator.of(context).pop(item);
+    ));
   }
 }
 

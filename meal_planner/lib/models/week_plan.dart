@@ -1,6 +1,7 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'day_plan.dart';
-import 'shopping_item.dart';
+import 'quick_add_item.dart';
+import 'shopping_amount.dart';
 
 part 'week_plan.freezed.dart';
 part 'week_plan.g.dart';
@@ -13,21 +14,25 @@ abstract class WeekPlan with _$WeekPlan {
     @Default({}) Map<String, DayPlan> days,
 
     /// Ad-hoc shopping items added via quick-add. Scoped to this week only.
-    @Default(<ShoppingItem>[]) List<ShoppingItem> quickAdds,
+    @Default(<QuickAddItem>[]) List<QuickAddItem> quickAdds,
 
-    /// IDs of GeneralItems hidden from this week's shopping list.
+    /// Catalog ids of general items hidden from this week's shopping list.
     /// Does not affect the underlying general items or recipe ingredients.
     @Default(<String>{}) Set<String> excludedGeneralIds,
 
-    /// Shopping-list items marked as bought (keyed by "name|unit", lowercase).
-    @Default(<String>{}) Set<String> checkedKeys,
+    /// Catalog ids of shopping lines marked as bought.
+    @Default(<String>{}) Set<String> checkedIds,
 
-    /// Shopping-list items marked as not available (keyed by "name|unit").
-    @Default(<String>{}) Set<String> unavailableKeys,
+    /// Catalog ids of shopping lines marked as not available.
+    @Default(<String>{}) Set<String> unavailableIds,
 
-    /// Per-week amount override for shopping items (keyed by "name|unit").
-    /// Replaces the derived amount; never mutates the recipe or general item.
-    @Default(<String, double>{}) Map<String, double> amountOverrides,
+    /// Per-week amount override for a shopping line, keyed by catalog id.
+    /// Replaces the derived amounts entirely (one amount in one unit);
+    /// never mutates the recipe, general item or catalog entry.
+    @Default(<String, ShoppingAmount>{})
+    Map<String, ShoppingAmount> amountOverrides,
+    @Default(false) bool deleted,
+    DateTime? deletedAt,
   }) = _WeekPlan;
 
   factory WeekPlan.fromJson(Map<String, dynamic> json) =>

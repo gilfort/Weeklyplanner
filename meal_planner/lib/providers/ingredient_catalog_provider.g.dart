@@ -6,9 +6,35 @@ part of 'ingredient_catalog_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$ingredientCatalogHash() => r'd5a8295de9004ed06c3070eed33dc9971f7f481a';
+String _$catalogByIdHash() => r'dc7a154c0fd9631113c7b367938149724a5d0f31';
 
-/// See also [IngredientCatalog].
+/// Catalog entries by id, for the many places that need to turn an id back
+/// into a display name.
+///
+/// Copied from [catalogById].
+@ProviderFor(catalogById)
+final catalogByIdProvider =
+    AutoDisposeFutureProvider<Map<String, IngredientCatalogEntry>>.internal(
+      catalogById,
+      name: r'catalogByIdProvider',
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$catalogByIdHash,
+      dependencies: null,
+      allTransitiveDependencies: null,
+    );
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+typedef CatalogByIdRef =
+    AutoDisposeFutureProviderRef<Map<String, IngredientCatalogEntry>>;
+String _$ingredientCatalogHash() => r'b513bd4db9b87945d49850b77c3be1443aa68320';
+
+/// The catalog owns ingredient identity. Everything that refers to an
+/// ingredient — recipe lines, general items, the week's checked-off state —
+/// stores a catalog id, so renaming an ingredient never orphans anything.
+///
+/// Copied from [IngredientCatalog].
 @ProviderFor(IngredientCatalog)
 final ingredientCatalogProvider =
     AsyncNotifierProvider<

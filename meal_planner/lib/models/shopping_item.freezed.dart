@@ -21,14 +21,15 @@ ShoppingItem _$ShoppingItemFromJson(Map<String, dynamic> json) {
 
 /// @nodoc
 mixin _$ShoppingItem {
-  String get id => throw _privateConstructorUsedError;
+  String get catalogId => throw _privateConstructorUsedError;
   String get name => throw _privateConstructorUsedError;
-  double get amount => throw _privateConstructorUsedError;
-  String get unit => throw _privateConstructorUsedError;
   String get category => throw _privateConstructorUsedError;
-  bool get isChecked => throw _privateConstructorUsedError;
-  bool get isUnavailable => throw _privateConstructorUsedError;
+  List<ShoppingAmount> get amounts => throw _privateConstructorUsedError;
   ShoppingSource get source => throw _privateConstructorUsedError;
+
+  /// True when a quick-add contributed to this line, which makes the line
+  /// removable from the week without touching recipes or general items.
+  bool get hasQuickAdd => throw _privateConstructorUsedError;
 
   /// Serializes this ShoppingItem to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -48,14 +49,12 @@ abstract class $ShoppingItemCopyWith<$Res> {
   ) = _$ShoppingItemCopyWithImpl<$Res, ShoppingItem>;
   @useResult
   $Res call({
-    String id,
+    String catalogId,
     String name,
-    double amount,
-    String unit,
     String category,
-    bool isChecked,
-    bool isUnavailable,
+    List<ShoppingAmount> amounts,
     ShoppingSource source,
+    bool hasQuickAdd,
   });
 }
 
@@ -74,49 +73,39 @@ class _$ShoppingItemCopyWithImpl<$Res, $Val extends ShoppingItem>
   @pragma('vm:prefer-inline')
   @override
   $Res call({
-    Object? id = null,
+    Object? catalogId = null,
     Object? name = null,
-    Object? amount = null,
-    Object? unit = null,
     Object? category = null,
-    Object? isChecked = null,
-    Object? isUnavailable = null,
+    Object? amounts = null,
     Object? source = null,
+    Object? hasQuickAdd = null,
   }) {
     return _then(
       _value.copyWith(
-            id: null == id
-                ? _value.id
-                : id // ignore: cast_nullable_to_non_nullable
+            catalogId: null == catalogId
+                ? _value.catalogId
+                : catalogId // ignore: cast_nullable_to_non_nullable
                       as String,
             name: null == name
                 ? _value.name
                 : name // ignore: cast_nullable_to_non_nullable
                       as String,
-            amount: null == amount
-                ? _value.amount
-                : amount // ignore: cast_nullable_to_non_nullable
-                      as double,
-            unit: null == unit
-                ? _value.unit
-                : unit // ignore: cast_nullable_to_non_nullable
-                      as String,
             category: null == category
                 ? _value.category
                 : category // ignore: cast_nullable_to_non_nullable
                       as String,
-            isChecked: null == isChecked
-                ? _value.isChecked
-                : isChecked // ignore: cast_nullable_to_non_nullable
-                      as bool,
-            isUnavailable: null == isUnavailable
-                ? _value.isUnavailable
-                : isUnavailable // ignore: cast_nullable_to_non_nullable
-                      as bool,
+            amounts: null == amounts
+                ? _value.amounts
+                : amounts // ignore: cast_nullable_to_non_nullable
+                      as List<ShoppingAmount>,
             source: null == source
                 ? _value.source
                 : source // ignore: cast_nullable_to_non_nullable
                       as ShoppingSource,
+            hasQuickAdd: null == hasQuickAdd
+                ? _value.hasQuickAdd
+                : hasQuickAdd // ignore: cast_nullable_to_non_nullable
+                      as bool,
           )
           as $Val,
     );
@@ -133,14 +122,12 @@ abstract class _$$ShoppingItemImplCopyWith<$Res>
   @override
   @useResult
   $Res call({
-    String id,
+    String catalogId,
     String name,
-    double amount,
-    String unit,
     String category,
-    bool isChecked,
-    bool isUnavailable,
+    List<ShoppingAmount> amounts,
     ShoppingSource source,
+    bool hasQuickAdd,
   });
 }
 
@@ -158,49 +145,39 @@ class __$$ShoppingItemImplCopyWithImpl<$Res>
   @pragma('vm:prefer-inline')
   @override
   $Res call({
-    Object? id = null,
+    Object? catalogId = null,
     Object? name = null,
-    Object? amount = null,
-    Object? unit = null,
     Object? category = null,
-    Object? isChecked = null,
-    Object? isUnavailable = null,
+    Object? amounts = null,
     Object? source = null,
+    Object? hasQuickAdd = null,
   }) {
     return _then(
       _$ShoppingItemImpl(
-        id: null == id
-            ? _value.id
-            : id // ignore: cast_nullable_to_non_nullable
+        catalogId: null == catalogId
+            ? _value.catalogId
+            : catalogId // ignore: cast_nullable_to_non_nullable
                   as String,
         name: null == name
             ? _value.name
             : name // ignore: cast_nullable_to_non_nullable
                   as String,
-        amount: null == amount
-            ? _value.amount
-            : amount // ignore: cast_nullable_to_non_nullable
-                  as double,
-        unit: null == unit
-            ? _value.unit
-            : unit // ignore: cast_nullable_to_non_nullable
-                  as String,
         category: null == category
             ? _value.category
             : category // ignore: cast_nullable_to_non_nullable
                   as String,
-        isChecked: null == isChecked
-            ? _value.isChecked
-            : isChecked // ignore: cast_nullable_to_non_nullable
-                  as bool,
-        isUnavailable: null == isUnavailable
-            ? _value.isUnavailable
-            : isUnavailable // ignore: cast_nullable_to_non_nullable
-                  as bool,
+        amounts: null == amounts
+            ? _value._amounts
+            : amounts // ignore: cast_nullable_to_non_nullable
+                  as List<ShoppingAmount>,
         source: null == source
             ? _value.source
             : source // ignore: cast_nullable_to_non_nullable
                   as ShoppingSource,
+        hasQuickAdd: null == hasQuickAdd
+            ? _value.hasQuickAdd
+            : hasQuickAdd // ignore: cast_nullable_to_non_nullable
+                  as bool,
       ),
     );
   }
@@ -208,47 +185,49 @@ class __$$ShoppingItemImplCopyWithImpl<$Res>
 
 /// @nodoc
 @JsonSerializable()
-class _$ShoppingItemImpl implements _ShoppingItem {
+class _$ShoppingItemImpl extends _ShoppingItem {
   const _$ShoppingItemImpl({
-    required this.id,
+    required this.catalogId,
     required this.name,
-    this.amount = 1.0,
-    this.unit = '',
     this.category = '',
-    this.isChecked = false,
-    this.isUnavailable = false,
+    final List<ShoppingAmount> amounts = const <ShoppingAmount>[],
     this.source = ShoppingSource.general,
-  });
+    this.hasQuickAdd = false,
+  }) : _amounts = amounts,
+       super._();
 
   factory _$ShoppingItemImpl.fromJson(Map<String, dynamic> json) =>
       _$$ShoppingItemImplFromJson(json);
 
   @override
-  final String id;
+  final String catalogId;
   @override
   final String name;
   @override
   @JsonKey()
-  final double amount;
-  @override
-  @JsonKey()
-  final String unit;
-  @override
-  @JsonKey()
   final String category;
+  final List<ShoppingAmount> _amounts;
   @override
   @JsonKey()
-  final bool isChecked;
-  @override
-  @JsonKey()
-  final bool isUnavailable;
+  List<ShoppingAmount> get amounts {
+    if (_amounts is EqualUnmodifiableListView) return _amounts;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_amounts);
+  }
+
   @override
   @JsonKey()
   final ShoppingSource source;
 
+  /// True when a quick-add contributed to this line, which makes the line
+  /// removable from the week without touching recipes or general items.
+  @override
+  @JsonKey()
+  final bool hasQuickAdd;
+
   @override
   String toString() {
-    return 'ShoppingItem(id: $id, name: $name, amount: $amount, unit: $unit, category: $category, isChecked: $isChecked, isUnavailable: $isUnavailable, source: $source)';
+    return 'ShoppingItem(catalogId: $catalogId, name: $name, category: $category, amounts: $amounts, source: $source, hasQuickAdd: $hasQuickAdd)';
   }
 
   @override
@@ -256,31 +235,27 @@ class _$ShoppingItemImpl implements _ShoppingItem {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
             other is _$ShoppingItemImpl &&
-            (identical(other.id, id) || other.id == id) &&
+            (identical(other.catalogId, catalogId) ||
+                other.catalogId == catalogId) &&
             (identical(other.name, name) || other.name == name) &&
-            (identical(other.amount, amount) || other.amount == amount) &&
-            (identical(other.unit, unit) || other.unit == unit) &&
             (identical(other.category, category) ||
                 other.category == category) &&
-            (identical(other.isChecked, isChecked) ||
-                other.isChecked == isChecked) &&
-            (identical(other.isUnavailable, isUnavailable) ||
-                other.isUnavailable == isUnavailable) &&
-            (identical(other.source, source) || other.source == source));
+            const DeepCollectionEquality().equals(other._amounts, _amounts) &&
+            (identical(other.source, source) || other.source == source) &&
+            (identical(other.hasQuickAdd, hasQuickAdd) ||
+                other.hasQuickAdd == hasQuickAdd));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
   int get hashCode => Object.hash(
     runtimeType,
-    id,
+    catalogId,
     name,
-    amount,
-    unit,
     category,
-    isChecked,
-    isUnavailable,
+    const DeepCollectionEquality().hash(_amounts),
     source,
+    hasQuickAdd,
   );
 
   /// Create a copy of ShoppingItem
@@ -297,37 +272,35 @@ class _$ShoppingItemImpl implements _ShoppingItem {
   }
 }
 
-abstract class _ShoppingItem implements ShoppingItem {
+abstract class _ShoppingItem extends ShoppingItem {
   const factory _ShoppingItem({
-    required final String id,
+    required final String catalogId,
     required final String name,
-    final double amount,
-    final String unit,
     final String category,
-    final bool isChecked,
-    final bool isUnavailable,
+    final List<ShoppingAmount> amounts,
     final ShoppingSource source,
+    final bool hasQuickAdd,
   }) = _$ShoppingItemImpl;
+  const _ShoppingItem._() : super._();
 
   factory _ShoppingItem.fromJson(Map<String, dynamic> json) =
       _$ShoppingItemImpl.fromJson;
 
   @override
-  String get id;
+  String get catalogId;
   @override
   String get name;
   @override
-  double get amount;
-  @override
-  String get unit;
-  @override
   String get category;
   @override
-  bool get isChecked;
-  @override
-  bool get isUnavailable;
+  List<ShoppingAmount> get amounts;
   @override
   ShoppingSource get source;
+
+  /// True when a quick-add contributed to this line, which makes the line
+  /// removable from the week without touching recipes or general items.
+  @override
+  bool get hasQuickAdd;
 
   /// Create a copy of ShoppingItem
   /// with the given fields replaced by the non-null parameter values.

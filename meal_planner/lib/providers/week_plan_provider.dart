@@ -2,15 +2,13 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../models/day_plan.dart';
 import '../models/meal_slot.dart';
-import '../models/shopping_item.dart';
+import '../models/quick_add_item.dart';
+import '../models/shopping_amount.dart';
 import '../models/week_plan.dart';
 import '../repositories/week_plan_repository.dart';
 import 'repository_providers.dart';
 
 part 'week_plan_provider.g.dart';
-
-String shoppingKey(String name, String unit) =>
-    '${name.toLowerCase()}|${unit.toLowerCase()}';
 
 @riverpod
 class WeekPlanNotifier extends _$WeekPlanNotifier {
@@ -32,7 +30,7 @@ class WeekPlanNotifier extends _$WeekPlanNotifier {
     String meal,
     MealSlot? slot,
   ) async {
-    final current = state.valueOrNull ?? WeekPlan(weekKey: _weekKey);
+    final current = _current;
     final currentDay = current.days[day] ?? const DayPlan();
 
     final updatedDay = switch (meal) {
@@ -51,7 +49,7 @@ class WeekPlanNotifier extends _$WeekPlanNotifier {
   }
 
   Future<void> toggleMealDone(String day, String meal) async {
-    final current = state.valueOrNull ?? WeekPlan(weekKey: _weekKey);
+    final current = _current;
     final currentDay = current.days[day] ?? const DayPlan();
 
     final slot = switch (meal) {
@@ -81,7 +79,7 @@ class WeekPlanNotifier extends _$WeekPlanNotifier {
     await _save(updatedPlan);
   }
 
-  // ── Shopping-list state (per-week) ──────────────────────────────────
+  // ── Shopping-list state (per-week, keyed by catalog id) ─────────────
 
   Future<void> _save(WeekPlan plan) async {
     final repo = await _repo;
@@ -91,61 +89,63 @@ class WeekPlanNotifier extends _$WeekPlanNotifier {
 
   WeekPlan get _current => state.valueOrNull ?? WeekPlan(weekKey: _weekKey);
 
-  Future<void> addQuickAdd(ShoppingItem item) async {
+  /// Adds an ad-hoc item. A second quick-add of the same ingredient in the
+  /// same unit tops up the existing one instead of creating a duplicate line.
+  Future<void> addQuickAdd(QuickAddItem item) async {
+    final current = _current;
+    final index = current.quickAdds.indexWhere(
+      (q) => q.catalogId == item.catalogId && q.unit == item.unit,
+    );
+    final next = [...current.quickAdds];
+    if (index >= 0) {
+      next[index] =
+          next[index].copyWith(amount: next[index].amount + item.amount);
+    } else {
+      next.add(item);
+    }
+    await _save(current.copyWith(quickAdds: next));
+  }
+
+  /// Removes every quick-add contribution for [catalogId].
+  Future<void> removeQuickAdd(String catalogId) async {
     final current = _current;
     await _save(current.copyWith(
-      quickAdds: [...current.quickAdds, item],
+      quickAdds:
+          current.quickAdds.where((q) => q.catalogId != catalogId).toList(),
     ));
   }
 
-  Future<void> removeQuickAdd(String id) async {
-    final current = _current;
-    await _save(current.copyWith(
-      quickAdds: current.quickAdds.where((q) => q.id != id).toList(),
-    ));
-  }
-
-  Future<void> updateQuickAdd(ShoppingItem item) async {
-    final current = _current;
-    await _save(current.copyWith(
-      quickAdds: [
-        for (final q in current.quickAdds)
-          if (q.id == item.id) item else q,
-      ],
-    ));
-  }
-
-  Future<void> toggleExcludedGeneral(String generalId) async {
+  Future<void> toggleExcludedGeneral(String catalogId) async {
     final current = _current;
     final next = {...current.excludedGeneralIds};
-    if (!next.remove(generalId)) next.add(generalId);
+    if (!next.remove(catalogId)) next.add(catalogId);
     await _save(current.copyWith(excludedGeneralIds: next));
   }
 
-  Future<void> toggleChecked(String key) async {
+  Future<void> toggleChecked(String catalogId) async {
     final current = _current;
-    final next = {...current.checkedKeys};
-    if (!next.remove(key)) next.add(key);
-    await _save(current.copyWith(checkedKeys: next));
+    final next = {...current.checkedIds};
+    if (!next.remove(catalogId)) next.add(catalogId);
+    await _save(current.copyWith(checkedIds: next));
   }
 
-  Future<void> toggleUnavailable(String key) async {
+  Future<void> toggleUnavailable(String catalogId) async {
     final current = _current;
-    final next = {...current.unavailableKeys};
-    if (!next.remove(key)) next.add(key);
-    await _save(current.copyWith(unavailableKeys: next));
+    final next = {...current.unavailableIds};
+    if (!next.remove(catalogId)) next.add(catalogId);
+    await _save(current.copyWith(unavailableIds: next));
   }
 
-  Future<void> setAmountOverride(String key, double amount) async {
+  Future<void> setAmountOverride(String catalogId, ShoppingAmount amount) async {
     final current = _current;
     await _save(current.copyWith(
-      amountOverrides: {...current.amountOverrides, key: amount},
+      amountOverrides: {...current.amountOverrides, catalogId: amount},
     ));
   }
 
-  Future<void> clearAmountOverride(String key) async {
+  Future<void> clearAmountOverride(String catalogId) async {
     final current = _current;
-    final next = {...current.amountOverrides}..remove(key);
+    final next = {...current.amountOverrides}..remove(catalogId);
     await _save(current.copyWith(amountOverrides: next));
   }
 
@@ -155,8 +155,8 @@ class WeekPlanNotifier extends _$WeekPlanNotifier {
   Future<void> finishShopping() async {
     final current = _current;
     await _save(current.copyWith(
-      checkedKeys: const {},
-      unavailableKeys: const {},
+      checkedIds: const {},
+      unavailableIds: const {},
       amountOverrides: const {},
     ));
   }

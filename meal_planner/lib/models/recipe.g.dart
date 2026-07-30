@@ -19,6 +19,10 @@ _$RecipeImpl _$$RecipeImplFromJson(Map<String, dynamic> json) => _$RecipeImpl(
   tags:
       (json['tags'] as List<dynamic>?)?.map((e) => e as String).toList() ??
       const [],
+  deleted: json['deleted'] as bool? ?? false,
+  deletedAt: json['deletedAt'] == null
+      ? null
+      : DateTime.parse(json['deletedAt'] as String),
 );
 
 Map<String, dynamic> _$$RecipeImplToJson(_$RecipeImpl instance) =>
@@ -29,4 +33,6 @@ Map<String, dynamic> _$$RecipeImplToJson(_$RecipeImpl instance) =>
       'servings': instance.servings,
       'ingredients': instance.ingredients.map((e) => e.toJson()).toList(),
       'tags': instance.tags,
+      'deleted': instance.deleted,
+      'deletedAt': instance.deletedAt?.toIso8601String(),
     };

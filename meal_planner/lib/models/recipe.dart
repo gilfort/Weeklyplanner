@@ -13,6 +13,8 @@ abstract class Recipe with _$Recipe {
     @Default(2) int servings,
     @Default([]) List<Ingredient> ingredients,
     @Default([]) List<String> tags,
+    @Default(false) bool deleted,
+    DateTime? deletedAt,
   }) = _Recipe;
 
   factory Recipe.fromJson(Map<String, dynamic> json) =>
