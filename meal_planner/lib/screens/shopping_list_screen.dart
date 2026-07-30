@@ -5,11 +5,12 @@ import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
 
 import '../models/models.dart';
+import '../providers/current_week_provider.dart';
 import '../providers/derived_shopping_list_provider.dart';
 import '../providers/general_items_provider.dart';
 import '../providers/ingredient_catalog_provider.dart';
-import '../providers/shopping_items_provider.dart';
 import '../providers/unit_provider.dart';
+import '../providers/week_plan_provider.dart';
 import '../theme.dart';
 
 const _uuid = Uuid();
@@ -55,8 +56,9 @@ class _WeeklyShoppingTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final weekKey = ref.watch(currentWeekKeyProvider);
     final derivedAsync = ref.watch(derivedShoppingListProvider);
-    final checkedAsync = ref.watch(shoppingItemsProvider);
+    final weekPlanAsync = ref.watch(weekPlanNotifierProvider(weekKey));
 
     return derivedAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -64,22 +66,13 @@ class _WeeklyShoppingTab extends ConsumerWidget {
         message: 'Einkaufsliste konnte nicht geladen werden.',
         onRetry: () => ref.invalidate(derivedShoppingListProvider),
       ),
-      data: (derivedItems) {
-        // Merge quick-add (ad-hoc) items from persisted state
-        final checkedItems = checkedAsync.valueOrNull ?? [];
-
-        // Ad-hoc items: persisted items that are NOT just state markers
-        // (they were added via quick-add and aren't checked/unavailable-only)
-        final derivedKeys = <String>{
-          for (final d in derivedItems)
-            '${d.name.toLowerCase()}|${d.unit.toLowerCase()}',
+      data: (items) {
+        final weekPlan = weekPlanAsync.valueOrNull;
+        final checkedKeys = weekPlan?.checkedKeys ?? const <String>{};
+        final unavailableKeys = weekPlan?.unavailableKeys ?? const <String>{};
+        final quickAddIds = {
+          for (final q in weekPlan?.quickAdds ?? const <ShoppingItem>[]) q.id,
         };
-        final adHocItems = checkedItems.where((c) {
-          final key = '${c.name.toLowerCase()}|${c.unit.toLowerCase()}';
-          return !derivedKeys.contains(key) && !c.isChecked;
-        }).toList();
-
-        final items = [...derivedItems, ...adHocItems];
 
         if (items.isEmpty) {
           return Column(
@@ -111,25 +104,11 @@ class _WeeklyShoppingTab extends ConsumerWidget {
           );
         }
 
-        // Build a set of checked item keys (name|unit) from persisted state
-        final checkedKeys = <String>{
-          for (final c in checkedItems)
-            if (c.isChecked) '${c.name.toLowerCase()}|${c.unit.toLowerCase()}',
-        };
-
-        // Build unavailable keys set
-        final unavailableKeys = <String>{
-          for (final c in checkedItems)
-            if (c.isUnavailable)
-              '${c.name.toLowerCase()}|${c.unit.toLowerCase()}',
-        };
-
         // Separate available and unavailable items
         final availableItems = <ShoppingItem>[];
         final unavailableItems = <ShoppingItem>[];
         for (final item in items) {
-          final key =
-              '${item.name.toLowerCase()}|${item.unit.toLowerCase()}';
+          final key = shoppingKey(item.name, item.unit);
           if (unavailableKeys.contains(key)) {
             unavailableItems.add(item);
           } else {
@@ -140,8 +119,7 @@ class _WeeklyShoppingTab extends ConsumerWidget {
         // Group available items by category
         final grouped = <String, List<ShoppingItem>>{};
         for (final item in availableItems) {
-          final cat =
-              item.category.isEmpty ? 'Sonstiges' : item.category;
+          final cat = item.category.isEmpty ? 'Sonstiges' : item.category;
           grouped.putIfAbsent(cat, () => []).add(item);
         }
 
@@ -155,7 +133,6 @@ class _WeeklyShoppingTab extends ConsumerWidget {
 
         return Column(
           children: [
-            // Quick-add field for one-off items
             const _QuickAddField(),
             Expanded(
               child: RuledPaperBackground(
@@ -169,12 +146,12 @@ class _WeeklyShoppingTab extends ConsumerWidget {
                         _ShoppingItemTile(
                           item: item,
                           isChecked: checkedKeys.contains(
-                            '${item.name.toLowerCase()}|${item.unit.toLowerCase()}',
+                            shoppingKey(item.name, item.unit),
                           ),
                           isUnavailable: false,
+                          isQuickAdd: quickAddIds.contains(item.id),
                         ),
                     ],
-                    // Unavailable section at bottom
                     if (unavailableItems.isNotEmpty) ...[
                       _CategoryHeader(
                         category: 'Nicht verfügbar',
@@ -184,16 +161,16 @@ class _WeeklyShoppingTab extends ConsumerWidget {
                         _ShoppingItemTile(
                           item: item,
                           isChecked: checkedKeys.contains(
-                            '${item.name.toLowerCase()}|${item.unit.toLowerCase()}',
+                            shoppingKey(item.name, item.unit),
                           ),
                           isUnavailable: true,
+                          isQuickAdd: quickAddIds.contains(item.id),
                         ),
                     ],
                   ],
                 ),
               ),
             ),
-            // Reset button
             SafeArea(
               child: Padding(
                 padding: const EdgeInsets.all(12),
@@ -230,7 +207,10 @@ class _WeeklyShoppingTab extends ConsumerWidget {
       ),
     );
     if (confirmed == true) {
-      await ref.read(shoppingItemsProvider.notifier).clearAll();
+      final weekKey = ref.read(currentWeekKeyProvider);
+      await ref
+          .read(weekPlanNotifierProvider(weekKey).notifier)
+          .finishShopping();
     }
   }
 }
@@ -264,11 +244,13 @@ class _ShoppingItemTile extends ConsumerWidget {
   final ShoppingItem item;
   final bool isChecked;
   final bool isUnavailable;
+  final bool isQuickAdd;
 
   const _ShoppingItemTile({
     required this.item,
     required this.isChecked,
     this.isUnavailable = false,
+    this.isQuickAdd = false,
   });
 
   @override
@@ -280,33 +262,37 @@ class _ShoppingItemTile extends ConsumerWidget {
     final muted = isChecked || isUnavailable;
     final textColor = muted ? PaperTheme.checked : PaperTheme.ink;
 
-    return Padding(
+    final tile = Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
       child: Row(
         children: [
-          // Checked checkbox
           SizedBox(
             width: 32,
             height: 32,
             child: Checkbox(
               value: isChecked,
-              onChanged: (_) => _toggle(ref),
+              onChanged: (_) => _toggleChecked(ref),
             ),
           ),
           const SizedBox(width: 8),
-          // Name + amount inline
           Expanded(
-            child: Text(
-              '${item.name}  $amountStr ${item.unit}'.trim(),
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: textColor,
-                    decoration: isChecked ? TextDecoration.lineThrough : null,
-                  ),
-              overflow: TextOverflow.ellipsis,
+            child: InkWell(
+              onTap: () => _editAmount(context, ref),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Text(
+                  '${item.name}  $amountStr ${item.unit}'.trim(),
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: textColor,
+                        decoration:
+                            isChecked ? TextDecoration.lineThrough : null,
+                      ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
             ),
           ),
           const SizedBox(width: 8),
-          // Unavailable checkbox
           Tooltip(
             message: isUnavailable ? 'Wieder verfügbar' : 'Nicht verfügbar',
             child: SizedBox(
@@ -315,7 +301,7 @@ class _ShoppingItemTile extends ConsumerWidget {
               child: Checkbox(
                 value: isUnavailable,
                 onChanged: (_) => _toggleUnavailable(ref),
-                side: BorderSide(
+                side: const BorderSide(
                   color: Color.fromARGB(153, 0xC0, 0x39, 0x2B),
                   width: 1.5,
                 ),
@@ -328,59 +314,127 @@ class _ShoppingItemTile extends ConsumerWidget {
               ),
             ),
           ),
-          // Extra space for future options
           const SizedBox(width: 16),
         ],
       ),
     );
+
+    if (!isQuickAdd) return tile;
+
+    // Quick-add items are swipe-to-delete (week-scoped, ad-hoc).
+    return Dismissible(
+      key: ValueKey('quickadd-${item.id}'),
+      direction: DismissDirection.endToStart,
+      background: Container(
+        color: Colors.red,
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 16),
+        child: const Icon(Icons.delete, color: Colors.white),
+      ),
+      onDismissed: (_) {
+        final weekKey = ref.read(currentWeekKeyProvider);
+        ref
+            .read(weekPlanNotifierProvider(weekKey).notifier)
+            .removeQuickAdd(item.id);
+      },
+      child: tile,
+    );
   }
 
-  Future<void> _toggle(WidgetRef ref) async {
-    final notifier = ref.read(shoppingItemsProvider.notifier);
-    final key = '${item.name.toLowerCase()}|${item.unit.toLowerCase()}';
-
-    final current = ref.read(shoppingItemsProvider).valueOrNull ?? [];
-    final existing = current.where(
-      (c) => '${c.name.toLowerCase()}|${c.unit.toLowerCase()}' == key,
-    );
-
-    if (existing.isNotEmpty) {
-      await notifier.toggleChecked(existing.first.id);
-    } else {
-      await notifier.upsert(ShoppingItem(
-        id: _uuid.v4(),
-        name: item.name,
-        amount: item.amount,
-        unit: item.unit,
-        category: item.category,
-        isChecked: true,
-        source: item.source,
-      ));
-    }
+  Future<void> _toggleChecked(WidgetRef ref) async {
+    final weekKey = ref.read(currentWeekKeyProvider);
+    await ref
+        .read(weekPlanNotifierProvider(weekKey).notifier)
+        .toggleChecked(shoppingKey(item.name, item.unit));
   }
 
   Future<void> _toggleUnavailable(WidgetRef ref) async {
-    final notifier = ref.read(shoppingItemsProvider.notifier);
-    final key = '${item.name.toLowerCase()}|${item.unit.toLowerCase()}';
+    final weekKey = ref.read(currentWeekKeyProvider);
+    await ref
+        .read(weekPlanNotifierProvider(weekKey).notifier)
+        .toggleUnavailable(shoppingKey(item.name, item.unit));
+  }
 
-    final current = ref.read(shoppingItemsProvider).valueOrNull ?? [];
-    final existing = current.where(
-      (c) => '${c.name.toLowerCase()}|${c.unit.toLowerCase()}' == key,
+  Future<void> _editAmount(BuildContext context, WidgetRef ref) async {
+    final result = await showDialog<double>(
+      context: context,
+      builder: (_) => _EditAmountDialog(item: item),
     );
+    if (result == null) return;
 
-    if (existing.isNotEmpty) {
-      await notifier.toggleUnavailable(existing.first.id);
+    final weekKey = ref.read(currentWeekKeyProvider);
+    final notifier = ref.read(weekPlanNotifierProvider(weekKey).notifier);
+    final key = shoppingKey(item.name, item.unit);
+
+    if (isQuickAdd) {
+      // Edit stored quick-add directly (keeps identity).
+      await notifier.updateQuickAdd(item.copyWith(amount: result));
     } else {
-      await notifier.upsert(ShoppingItem(
-        id: _uuid.v4(),
-        name: item.name,
-        amount: item.amount,
-        unit: item.unit,
-        category: item.category,
-        isUnavailable: true,
-        source: item.source,
-      ));
+      await notifier.setAmountOverride(key, result);
     }
+  }
+}
+
+// ── Dialog for editing the amount of a shopping-list item ────────────
+
+class _EditAmountDialog extends StatefulWidget {
+  final ShoppingItem item;
+  const _EditAmountDialog({required this.item});
+
+  @override
+  State<_EditAmountDialog> createState() => _EditAmountDialogState();
+}
+
+class _EditAmountDialogState extends State<_EditAmountDialog> {
+  late final TextEditingController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    final a = widget.item.amount;
+    _ctrl = TextEditingController(
+      text: a == a.roundToDouble() ? a.toInt().toString() : a.toString(),
+    );
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text('${widget.item.name} bearbeiten'),
+      content: TextField(
+        controller: _ctrl,
+        autofocus: true,
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        inputFormatters: [
+          FilteringTextInputFormatter.allow(RegExp(r'[\d.,]')),
+        ],
+        decoration: InputDecoration(
+          labelText: 'Menge',
+          suffixText: widget.item.unit.isEmpty ? null : widget.item.unit,
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Abbrechen'),
+        ),
+        FilledButton(
+          onPressed: () {
+            final parsed =
+                double.tryParse(_ctrl.text.replaceAll(',', '.'));
+            if (parsed == null) return;
+            Navigator.of(context).pop(parsed);
+          },
+          child: const Text('Speichern'),
+        ),
+      ],
+    );
   }
 }
 
@@ -443,7 +497,6 @@ class _QuickAddFieldState extends ConsumerState<_QuickAddField> {
     final text = _controller.text.trim();
     if (text.isEmpty) return;
 
-    // Parse "2x Milch" or "3 Eier" style input
     final match = RegExp(r'^(\d+(?:[.,]\d+)?)\s*[xX]?\s+(.+)$').firstMatch(text);
     final double amount;
     final String name;
@@ -465,7 +518,10 @@ class _QuickAddFieldState extends ConsumerState<_QuickAddField> {
       source: ShoppingSource.general,
     );
 
-    await ref.read(shoppingItemsProvider.notifier).upsert(item);
+    final weekKey = ref.read(currentWeekKeyProvider);
+    await ref
+        .read(weekPlanNotifierProvider(weekKey).notifier)
+        .addQuickAdd(item);
     _controller.clear();
     _focusNode.requestFocus();
   }
@@ -479,6 +535,8 @@ class _GeneralItemsTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final generalAsync = ref.watch(generalItemsProvider);
+    final weekKey = ref.watch(currentWeekKeyProvider);
+    final weekPlanAsync = ref.watch(weekPlanNotifierProvider(weekKey));
 
     return generalAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -487,6 +545,8 @@ class _GeneralItemsTab extends ConsumerWidget {
         onRetry: () => ref.invalidate(generalItemsProvider),
       ),
       data: (items) {
+        final excluded =
+            weekPlanAsync.valueOrNull?.excludedGeneralIds ?? const <String>{};
         return Column(
           children: [
             Expanded(
@@ -516,8 +576,13 @@ class _GeneralItemsTab extends ConsumerWidget {
                       child: ListView.builder(
                         padding: const EdgeInsets.only(bottom: 80),
                         itemCount: items.length,
-                        itemBuilder: (context, index) =>
-                            _GeneralItemTile(item: items[index]),
+                        itemBuilder: (context, index) {
+                          final item = items[index];
+                          return _GeneralItemTile(
+                            item: item,
+                            isExcludedThisWeek: excluded.contains(item.id),
+                          );
+                        },
                       ),
                     ),
             ),
@@ -530,7 +595,11 @@ class _GeneralItemsTab extends ConsumerWidget {
 
 class _GeneralItemTile extends ConsumerWidget {
   final GeneralItem item;
-  const _GeneralItemTile({required this.item});
+  final bool isExcludedThisWeek;
+  const _GeneralItemTile({
+    required this.item,
+    required this.isExcludedThisWeek,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -538,29 +607,93 @@ class _GeneralItemTile extends ConsumerWidget {
         ? item.amount.toInt().toString()
         : item.amount.toStringAsFixed(1);
 
+    final theme = Theme.of(context);
+
     return Dismissible(
       key: ValueKey(item.id),
-      direction: DismissDirection.endToStart,
+      direction: DismissDirection.horizontal,
       background: Container(
+        // Swipe right → exclude/include for this week
+        color: Colors.orange,
+        alignment: Alignment.centerLeft,
+        padding: const EdgeInsets.only(left: 16),
+        child: Icon(
+          isExcludedThisWeek ? Icons.visibility : Icons.visibility_off,
+          color: Colors.white,
+        ),
+      ),
+      secondaryBackground: Container(
+        // Swipe left → delete
         color: Colors.red,
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 16),
         child: const Icon(Icons.delete, color: Colors.white),
       ),
-      onDismissed: (_) =>
-          ref.read(generalItemsProvider.notifier).delete(item.id),
-      child: ListTile(
-        title: Text(item.name),
-        subtitle: Text('$amountStr ${item.unit}'.trim()),
-        trailing: item.category.isNotEmpty
-            ? Chip(
-                label: Text(item.category),
-                visualDensity: VisualDensity.compact,
-                padding: EdgeInsets.zero,
-                labelPadding: const EdgeInsets.symmetric(horizontal: 6),
-              )
+      confirmDismiss: (direction) async {
+        if (direction == DismissDirection.startToEnd) {
+          // Toggle exclusion for current week, but keep tile in list.
+          final weekKey = ref.read(currentWeekKeyProvider);
+          await ref
+              .read(weekPlanNotifierProvider(weekKey).notifier)
+              .toggleExcludedGeneral(item.id);
+          return false;
+        }
+        // endToStart → delete with confirmation
+        return await showDialog<bool>(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: const Text('Artikel löschen?'),
+                content: Text(
+                    '„${item.name}" wird dauerhaft aus der generellen Liste entfernt.'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(ctx).pop(false),
+                    child: const Text('Abbrechen'),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.of(ctx).pop(true),
+                    child: const Text('Löschen'),
+                  ),
+                ],
+              ),
+            ) ??
+            false;
+      },
+      onDismissed: (direction) {
+        if (direction == DismissDirection.endToStart) {
+          ref.read(generalItemsProvider.notifier).delete(item.id);
+        }
+      },
+      child: Container(
+        color: isExcludedThisWeek
+            ? theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4)
             : null,
-        onTap: () => _editItem(context, ref),
+        child: ListTile(
+          title: Text(
+            item.name,
+            style: TextStyle(
+              decoration: isExcludedThisWeek ? TextDecoration.lineThrough : null,
+              color: isExcludedThisWeek
+                  ? theme.colorScheme.onSurfaceVariant
+                  : null,
+            ),
+          ),
+          subtitle: Text(
+            isExcludedThisWeek
+                ? '$amountStr ${item.unit}  ·  Diese Woche ausgeschlossen'
+                    .trim()
+                : '$amountStr ${item.unit}'.trim(),
+          ),
+          trailing: item.category.isNotEmpty
+              ? Chip(
+                  label: Text(item.category),
+                  visualDensity: VisualDensity.compact,
+                  padding: EdgeInsets.zero,
+                  labelPadding: const EdgeInsets.symmetric(horizontal: 6),
+                )
+              : null,
+          onTap: () => _editItem(context, ref),
+        ),
       ),
     );
   }
@@ -604,7 +737,6 @@ class ShoppingListFab extends ConsumerWidget {
     );
     if (result != null) {
       await ref.read(generalItemsProvider.notifier).upsert(result);
-      // Learn into catalog
       await ref.read(ingredientCatalogProvider.notifier).learnIngredient(
             name: result.name,
             unit: result.unit,
@@ -671,7 +803,6 @@ class _GeneralItemDialogState extends ConsumerState<_GeneralItemDialog> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Name with autocomplete
                 RawAutocomplete<IngredientCatalogEntry>(
                   textEditingController: _nameCtrl,
                   focusNode: FocusNode(),
@@ -801,7 +932,6 @@ class _GeneralItemDialogState extends ConsumerState<_GeneralItemDialog> {
   }
 
   Widget _buildCategoryAutocomplete(List<IngredientCatalogEntry> catalog) {
-    // Collect unique categories from the catalog
     final categories = <String>{
       for (final e in catalog)
         if (e.defaultCategory.isNotEmpty) e.defaultCategory,

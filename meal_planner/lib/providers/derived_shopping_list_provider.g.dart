@@ -7,11 +7,12 @@ part of 'derived_shopping_list_provider.dart';
 // **************************************************************************
 
 String _$derivedShoppingListHash() =>
-    r'adae340131842c83a902a4823c70bb494001b305';
+    r'4330551390569561586c3d1c5edb3de2e2246cc0';
 
 /// Pure derived provider — no own state.
-/// Aggregates scaled recipe ingredients from the active week plan
-/// and combines them with general items into a unified shopping list.
+/// Aggregates scaled recipe ingredients from the active week plan,
+/// merges general items (minus the ones excluded this week), applies
+/// per-week amount overrides, and appends week-scoped quick-add items.
 ///
 /// Copied from [derivedShoppingList].
 @ProviderFor(derivedShoppingList)

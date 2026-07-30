@@ -6,7 +6,7 @@ part of 'week_plan_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$weekPlanNotifierHash() => r'83c723163eea0e6596fdac3bcb3e806b41437f0a';
+String _$weekPlanNotifierHash() => r'7bd99a58e14deefc0a90e75ebe55e988be710a73';
 
 /// Copied from Dart SDK
 class _SystemHash {

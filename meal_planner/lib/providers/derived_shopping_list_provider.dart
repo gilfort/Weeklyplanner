@@ -13,20 +13,19 @@ import 'general_items_provider.dart';
 part 'derived_shopping_list_provider.g.dart';
 
 /// Pure derived provider — no own state.
-/// Aggregates scaled recipe ingredients from the active week plan
-/// and combines them with general items into a unified shopping list.
+/// Aggregates scaled recipe ingredients from the active week plan,
+/// merges general items (minus the ones excluded this week), applies
+/// per-week amount overrides, and appends week-scoped quick-add items.
 @riverpod
 Future<List<ShoppingItem>> derivedShoppingList(
   DerivedShoppingListRef ref,
 ) async {
   final weekKey = ref.watch(currentWeekKeyProvider);
 
-  // Properly await all async providers
   final weekPlan = await ref.watch(weekPlanNotifierProvider(weekKey).future);
   final recipes = await ref.watch(recipesProvider.future);
   final generalItems = await ref.watch(generalItemsProvider.future);
 
-  // Build a lookup map: recipeId → Recipe
   final recipeMap = {for (final r in recipes) r.id: r};
 
   // Collect all meal slots from every day
@@ -50,7 +49,7 @@ Future<List<ShoppingItem>> derivedShoppingList(
     final scaled = _scaleIngredients(recipe, servings);
 
     for (final ing in scaled) {
-      final key = '${ing.name.toLowerCase()}|${ing.unit.toLowerCase()}';
+      final key = shoppingKey(ing.name, ing.unit);
       if (aggregated.containsKey(key)) {
         aggregated[key] = aggregated[key]!.add(ing.amount);
       } else {
@@ -64,11 +63,11 @@ Future<List<ShoppingItem>> derivedShoppingList(
     }
   }
 
-  // Merge general items into the same aggregation map.
-  // If a general item matches a recipe ingredient by name|unit, amounts add up.
+  // Merge general items (skip ones excluded this week).
   final mergedKeys = <String>{};
   for (final g in generalItems) {
-    final key = '${g.name.toLowerCase()}|${g.unit.toLowerCase()}';
+    if (weekPlan.excludedGeneralIds.contains(g.id)) continue;
+    final key = shoppingKey(g.name, g.unit);
     if (aggregated.containsKey(key)) {
       aggregated[key] = aggregated[key]!.add(g.amount, merged: true);
       mergedKeys.add(key);
@@ -85,8 +84,9 @@ Future<List<ShoppingItem>> derivedShoppingList(
   }
 
   const uuid = Uuid();
+  final overrides = weekPlan.amountOverrides;
 
-  return aggregated.entries.map((e) {
+  final derived = aggregated.entries.map((e) {
     final agg = e.value;
     final ShoppingSource source;
     if (mergedKeys.contains(e.key)) {
@@ -96,15 +96,26 @@ Future<List<ShoppingItem>> derivedShoppingList(
     } else {
       source = ShoppingSource.recipe;
     }
+    final amount = overrides[e.key] ?? agg.amount;
     return ShoppingItem(
       id: uuid.v4(),
       name: agg.name,
-      amount: agg.amount,
+      amount: amount,
       unit: agg.unit,
       category: agg.category,
       source: source,
     );
   }).toList();
+
+  // Append quick-adds (keep stored IDs so edit/delete works on quickAdds list).
+  // Apply amount override if user edited the quick-add from the shopping list.
+  final quickAdds = weekPlan.quickAdds.map((q) {
+    final key = shoppingKey(q.name, q.unit);
+    final amount = overrides[key] ?? q.amount;
+    return q.copyWith(amount: amount);
+  });
+
+  return [...derived, ...quickAdds];
 }
 
 List<Ingredient> _scaleIngredients(Recipe recipe, int targetServings) {

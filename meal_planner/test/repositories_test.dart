@@ -165,60 +165,6 @@ void main() {
     });
   });
 
-  // ── ShoppingStateRepository ───────────────────────────────────────
-
-  group('ShoppingStateRepository', () {
-    late ShoppingStateRepository repo;
-
-    setUp(() {
-      repo = ShoppingStateRepository(storage: testStorage(tmpDir));
-    });
-
-    test('readAll returns empty list when file does not exist', () async {
-      expect(await repo.readAll(), isEmpty);
-    });
-
-    test('toggleChecked flips isChecked', () async {
-      await repo.upsertItem(
-        ShoppingItem(id: 's1', name: 'Milch', isChecked: false),
-      );
-
-      await repo.toggleChecked('s1');
-      var items = await repo.readAll();
-      expect(items.first.isChecked, isTrue);
-
-      await repo.toggleChecked('s1');
-      items = await repo.readAll();
-      expect(items.first.isChecked, isFalse);
-    });
-
-    test('clearChecked removes only checked items', () async {
-      await repo.upsertItem(
-        ShoppingItem(id: 's1', name: 'Milch', isChecked: true),
-      );
-      await repo.upsertItem(
-        ShoppingItem(id: 's2', name: 'Brot', isChecked: false),
-      );
-
-      await repo.clearChecked();
-      final items = await repo.readAll();
-      expect(items.length, 1);
-      expect(items.first.id, 's2');
-    });
-
-    test('source enum survives persistence', () async {
-      await repo.upsertItem(
-        ShoppingItem(
-          id: 's1',
-          name: 'Spaghetti',
-          source: ShoppingSource.recipe,
-        ),
-      );
-      final items = await repo.readAll();
-      expect(items.first.source, ShoppingSource.recipe);
-    });
-  });
-
   // ── Edge cases ────────────────────────────────────────────────────
 
   group('Edge cases', () {

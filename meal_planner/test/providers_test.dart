@@ -36,7 +36,6 @@ void main() {
     final recipeRepo = RecipeRepository(storage: storage);
     final weekPlanRepo = WeekPlanRepository(storage: storage);
     final generalRepo = GeneralItemRepository(storage: storage);
-    final shoppingRepo = ShoppingStateRepository(storage: storage);
 
     // Pre-seed data — await to ensure files are written before providers read
     if (initialRecipes.isNotEmpty) {
@@ -54,7 +53,6 @@ void main() {
         recipeRepositoryProvider.overrideWithValue(recipeRepo),
         weekPlanRepositoryProvider.overrideWithValue(weekPlanRepo),
         generalItemRepositoryProvider.overrideWithValue(generalRepo),
-        shoppingStateRepositoryProvider.overrideWithValue(shoppingRepo),
       ],
     );
 
