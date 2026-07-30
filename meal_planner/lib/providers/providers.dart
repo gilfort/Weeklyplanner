@@ -1,6 +1,8 @@
 export 'current_week_provider.dart';
 export 'repository_providers.dart';
+export 'storage_config_provider.dart';
 export 'storage_path_provider.dart';
+export 'sync_provider.dart';
 export 'recipe_provider.dart';
 export 'week_plan_provider.dart';
 export 'general_items_provider.dart';

@@ -6,7 +6,7 @@ part of 'ingredient_catalog_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$ingredientCatalogHash() => r'4f04dafc1ce9d224c55a749436268e345e16e685';
+String _$ingredientCatalogHash() => r'd5a8295de9004ed06c3070eed33dc9971f7f481a';
 
 /// See also [IngredientCatalog].
 @ProviderFor(IngredientCatalog)

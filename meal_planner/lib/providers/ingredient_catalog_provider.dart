@@ -8,18 +8,20 @@ part 'ingredient_catalog_provider.g.dart';
 
 @Riverpod(keepAlive: true)
 class IngredientCatalog extends _$IngredientCatalog {
-  late IngredientCatalogRepository _repo;
+  Future<IngredientCatalogRepository> get _repo =>
+      ref.read(ingredientCatalogRepositoryProvider.future);
 
   @override
   Future<List<IngredientCatalogEntry>> build() async {
-    _repo = ref.watch(ingredientCatalogRepositoryProvider);
-    return _repo.readAll();
+    final repo = await ref.watch(ingredientCatalogRepositoryProvider.future);
+    return repo.readAll();
   }
 
   /// Upsert an entry. If an entry with the same id exists, it is updated.
   Future<void> upsert(IngredientCatalogEntry entry) async {
-    await _repo.upsertEntry(entry);
-    state = AsyncData(await _repo.readAll());
+    final repo = await _repo;
+    await repo.upsertEntry(entry);
+    state = AsyncData(await repo.readAll());
   }
 
   /// Convenience: upsert from raw ingredient data (name, unit, category).

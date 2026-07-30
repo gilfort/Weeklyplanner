@@ -7,21 +7,23 @@ part 'unit_provider.g.dart';
 
 @Riverpod(keepAlive: true)
 class Units extends _$Units {
-  late UnitRepository _repo;
+  Future<UnitRepository> get _repo => ref.read(unitRepositoryProvider.future);
 
   @override
   Future<List<String>> build() async {
-    _repo = ref.watch(unitRepositoryProvider);
-    return _repo.readAll();
+    final repo = await ref.watch(unitRepositoryProvider.future);
+    return repo.readAll();
   }
 
   Future<void> addUnit(String unit) async {
-    await _repo.addUnit(unit);
-    state = AsyncData(await _repo.readAll());
+    final repo = await _repo;
+    await repo.addUnit(unit);
+    state = AsyncData(await repo.readAll());
   }
 
   Future<void> removeUnit(String unit) async {
-    await _repo.removeUnit(unit);
-    state = AsyncData(await _repo.readAll());
+    final repo = await _repo;
+    await repo.removeUnit(unit);
+    state = AsyncData(await repo.readAll());
   }
 }

@@ -4,88 +4,80 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../repositories/repositories.dart';
-import 'google_drive_provider.dart';
-import 'storage_mode_provider.dart';
-import 'storage_path_provider.dart';
+import '../services/webdav_credentials_service.dart';
+import 'storage_config_provider.dart';
 
 part 'repository_providers.g.dart';
 
-/// Builds the [StorageBackend] appropriate to the platform + user config.
-///
-/// Selection order:
-///   - Web            → [WebStorageBackend]
-///   - Drive mode ✓   → [CachedSyncStorageBackend] (local cache + Drive)
-///   - Local mode     → [FileStorageBackend] (custom path optional)
-///
-/// If Drive mode is selected but the user has not yet signed in or picked
-/// a folder, we fall back to the local file backend so the app stays usable;
-/// the Settings screen prompts the user to finish setup.
 @riverpod
-StorageBackend storageBackend(StorageBackendRef ref) {
+WebDavCredentialsService webdavCredentialsService(
+    WebdavCredentialsServiceRef ref) {
+  return WebDavCredentialsService();
+}
+
+/// Creates the correct [StorageBackend] based on the current platform and
+/// user-configured [StorageConfig]. Async because the WebDAV branch needs
+/// to read the password from secure storage.
+@riverpod
+Future<StorageBackend> storageBackend(StorageBackendRef ref) async {
   if (kIsWeb) {
     return WebStorageBackend();
   }
 
-  final mode =
-      ref.watch(currentStorageModeProvider).valueOrNull ?? StorageMode.local;
+  final config = await ref.watch(storageConfigNotifierProvider.future);
 
-  if (mode == StorageMode.googleDrive) {
-    final signInAsync = ref.watch(signInProvider);
-    // Auto-kick the silent Google sign-in on cold start. `SignIn.build()` is
-    // idle; without this trigger Drive mode would stay stuck on local-only
-    // until the user opens the Settings screen.
-    if (signInAsync is AsyncData && signInAsync.value == null) {
-      Future.microtask(
-        () => ref.read(signInProvider.notifier).ensureInitialized(),
+  switch (config.type) {
+    case StorageType.saf:
+      final local = FileStorageBackend();
+      final remote = SafStorageBackend(treeUri: config.safUri!);
+      return CachedSyncStorageBackend(local: local, remote: remote);
+    case StorageType.webdav:
+      final pw =
+          await ref.read(webdavCredentialsServiceProvider).read(config);
+      if (pw == null) {
+        throw StateError('WebDAV password missing for ${config.webdavUrl}');
+      }
+      final local = FileStorageBackend();
+      final remote = WebDavStorageBackend(
+        baseUrl: config.webdavUrl!,
+        username: config.webdavUsername!,
+        password: pw,
+        pathPrefix: config.webdavPathPrefix ?? '/MealPlanner',
       );
-    }
-    final account = signInAsync.valueOrNull;
-    final folder = ref.watch(driveFolderProvider).valueOrNull;
-    if (account != null && folder != null) {
-      final auth = ref.watch(googleAuthServiceProvider);
-      return CachedSyncStorageBackend(
-        local: FileStorageBackend(),
-        remote: GoogleDriveStorageBackend(
-          auth: auth,
-          folderId: folder.folderId,
-        ),
-      );
-    }
-    // Not fully configured yet — local cache only.
-    return FileStorageBackend();
+      return CachedSyncStorageBackend(local: local, remote: remote);
+    case StorageType.filesystem:
+      return FileStorageBackend(directoryOverride: Directory(config.path!));
+    case StorageType.local:
+      return FileStorageBackend();
   }
-
-  // Local mode
-  final customPath = ref.watch(storagePathProvider).valueOrNull;
-  if (customPath != null && customPath.isNotEmpty) {
-    return FileStorageBackend(directoryOverride: Directory(customPath));
-  }
-  return FileStorageBackend();
 }
 
 @riverpod
-RecipeRepository recipeRepository(RecipeRepositoryRef ref) {
-  return RecipeRepository(storage: ref.watch(storageBackendProvider));
+Future<RecipeRepository> recipeRepository(RecipeRepositoryRef ref) async {
+  return RecipeRepository(storage: await ref.watch(storageBackendProvider.future));
 }
 
 @riverpod
-WeekPlanRepository weekPlanRepository(WeekPlanRepositoryRef ref) {
-  return WeekPlanRepository(storage: ref.watch(storageBackendProvider));
+Future<WeekPlanRepository> weekPlanRepository(WeekPlanRepositoryRef ref) async {
+  return WeekPlanRepository(
+      storage: await ref.watch(storageBackendProvider.future));
 }
 
 @riverpod
-GeneralItemRepository generalItemRepository(GeneralItemRepositoryRef ref) {
-  return GeneralItemRepository(storage: ref.watch(storageBackendProvider));
+Future<GeneralItemRepository> generalItemRepository(
+    GeneralItemRepositoryRef ref) async {
+  return GeneralItemRepository(
+      storage: await ref.watch(storageBackendProvider.future));
 }
 
 @riverpod
-IngredientCatalogRepository ingredientCatalogRepository(
-    IngredientCatalogRepositoryRef ref) {
+Future<IngredientCatalogRepository> ingredientCatalogRepository(
+    IngredientCatalogRepositoryRef ref) async {
   return IngredientCatalogRepository(
-      storage: ref.watch(storageBackendProvider));
+      storage: await ref.watch(storageBackendProvider.future));
 }
 
 @riverpod
-UnitRepository unitRepository(UnitRepositoryRef ref) {
-  return UnitRepository(storage: ref.watch(storageBackendProvider));
+Future<UnitRepository> unitRepository(UnitRepositoryRef ref) async {
+  return UnitRepository(storage: await ref.watch(storageBackendProvider.future));
 }

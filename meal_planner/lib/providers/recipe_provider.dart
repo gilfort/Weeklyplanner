@@ -9,22 +9,25 @@ part 'recipe_provider.g.dart';
 
 @riverpod
 class Recipes extends _$Recipes {
-  late RecipeRepository _repo;
+  Future<RecipeRepository> get _repo =>
+      ref.read(recipeRepositoryProvider.future);
 
   @override
   Future<List<Recipe>> build() async {
-    _repo = ref.watch(recipeRepositoryProvider);
-    return _repo.readAll();
+    final repo = await ref.watch(recipeRepositoryProvider.future);
+    return repo.readAll();
   }
 
   Future<void> upsert(Recipe recipe) async {
-    await _repo.upsertRecipe(recipe);
-    state = AsyncData(await _repo.readAll());
+    final repo = await _repo;
+    await repo.upsertRecipe(recipe);
+    state = AsyncData(await repo.readAll());
   }
 
   Future<void> delete(String id) async {
-    await _repo.deleteRecipe(id);
-    state = AsyncData(await _repo.readAll());
+    final repo = await _repo;
+    await repo.deleteRecipe(id);
+    state = AsyncData(await repo.readAll());
   }
 
   /// Scale a recipe's ingredients to a target number of servings.

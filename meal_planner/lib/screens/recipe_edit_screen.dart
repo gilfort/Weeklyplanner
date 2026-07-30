@@ -93,11 +93,15 @@ class _RecipeEditScreenState extends ConsumerState<RecipeEditScreen> {
             TextFormField(
               controller: _descCtrl,
               decoration: const InputDecoration(
-                labelText: 'Beschreibung',
+                labelText: 'Beschreibung / Zubereitung',
                 border: OutlineInputBorder(),
+                alignLabelWithHint: true,
+                hintText: 'Rezept-Schritte, Notizen …',
               ),
-              maxLines: 3,
-              textInputAction: TextInputAction.next,
+              minLines: 4,
+              maxLines: null,
+              keyboardType: TextInputType.multiline,
+              textInputAction: TextInputAction.newline,
             ),
             const SizedBox(height: 12),
             TextFormField(

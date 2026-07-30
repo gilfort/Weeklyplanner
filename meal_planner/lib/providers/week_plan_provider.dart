@@ -14,14 +14,16 @@ String shoppingKey(String name, String unit) =>
 
 @riverpod
 class WeekPlanNotifier extends _$WeekPlanNotifier {
-  late WeekPlanRepository _repo;
   late String _weekKey;
+
+  Future<WeekPlanRepository> get _repo =>
+      ref.read(weekPlanRepositoryProvider.future);
 
   @override
   Future<WeekPlan> build(String weekKey) async {
     _weekKey = weekKey;
-    _repo = ref.watch(weekPlanRepositoryProvider);
-    final found = await _repo.findByWeekKey(weekKey);
+    final repo = await ref.watch(weekPlanRepositoryProvider.future);
+    final found = await repo.findByWeekKey(weekKey);
     return found ?? WeekPlan(weekKey: weekKey);
   }
 
@@ -45,8 +47,7 @@ class WeekPlanNotifier extends _$WeekPlanNotifier {
       days: {...current.days, day: updatedDay},
     );
 
-    await _repo.upsertWeekPlan(updatedPlan);
-    state = AsyncData(updatedPlan);
+    await _save(updatedPlan);
   }
 
   Future<void> toggleMealDone(String day, String meal) async {
@@ -77,14 +78,14 @@ class WeekPlanNotifier extends _$WeekPlanNotifier {
       days: {...current.days, day: updatedDay},
     );
 
-    await _repo.upsertWeekPlan(updatedPlan);
-    state = AsyncData(updatedPlan);
+    await _save(updatedPlan);
   }
 
   // ── Shopping-list state (per-week) ──────────────────────────────────
 
   Future<void> _save(WeekPlan plan) async {
-    await _repo.upsertWeekPlan(plan);
+    final repo = await _repo;
+    await repo.upsertWeekPlan(plan);
     state = AsyncData(plan);
   }
 

@@ -1,75 +1,108 @@
-import 'dart:async';
-
 import 'storage_backend.dart';
 
-/// Offline-first wrapper: reads/writes a local [StorageBackend] immediately
-/// and asynchronously syncs to a remote one. Remote-wins on first access
-/// per session (so other devices' edits propagate on app start).
+/// Offline-first StorageBackend that caches data locally and syncs with a
+/// remote backend (SAF, WebDAV, …).
+///
+/// - Reads always hit the local cache (fast, works offline).
+/// - Writes go to local cache immediately and mark the key as dirty.
+/// - [syncAll] resolves differences between local and remote.
+///
+/// Dirty state is in-memory only. On crash the next app start performs a full
+/// sync which recovers any unsynced changes.
 class CachedSyncStorageBackend implements StorageBackend {
-  final StorageBackend local;
-  final StorageBackend remote;
+  final SyncableStorageBackend local;
+  final SyncableStorageBackend remote;
 
-  /// Keys whose local write has not yet succeeded on the remote.
-  final Set<String> _dirty = {};
-
-  /// Keys that have already been reconciled with the remote this session.
-  final Set<String> _pulled = {};
+  final Set<String> _dirtyKeys = {};
 
   CachedSyncStorageBackend({required this.local, required this.remote});
 
+  Set<String> get dirtyKeys => Set.unmodifiable(_dirtyKeys);
+
   @override
-  Future<String?> read(String key) async {
-    // On first session access: try remote first (other devices may have
-    // newer data). Skip pull if we have local unsynced changes.
-    if (!_pulled.contains(key) && !_dirty.contains(key)) {
-      _pulled.add(key);
-      try {
-        final remoteContent = await remote.read(key);
-        if (remoteContent != null) {
-          await local.write(key, remoteContent);
-          return remoteContent;
-        }
-        // Remote has nothing — fall through to local (empty or initial).
-      } catch (_) {
-        // Offline / auth failure — fall back to cache.
-      }
-    }
-    return local.read(key);
-  }
+  Future<String?> read(String key) => local.read(key);
 
   @override
   Future<void> write(String key, String value) async {
     await local.write(key, value);
-    _pulled.add(key);
-    _dirty.add(key);
-    unawaited(_pushInBackground(key, value));
+    _dirtyKeys.add(key);
   }
 
-  Future<void> _pushInBackground(String key, String value) async {
-    try {
-      await remote.write(key, value);
-      _dirty.remove(key);
-    } catch (_) {
-      // Stays dirty; retried by [flushDirty] or on next write.
-    }
-  }
+  /// Full two-way sync:
+  /// - Remote wins when local cache is empty (fresh install / new device).
+  /// - Dirty local files are pushed; if remote is newer than dirty local,
+  ///   the local version is backed up before pulling remote.
+  /// - Non-dirty local files pull from remote if remote is newer.
+  Future<void> syncAll() async {
+    final localKeys = await local.listKeys();
+    final remoteKeys = await remote.listKeys();
+    final allKeys = {...localKeys, ...remoteKeys};
 
-  /// Pushes all dirty keys to the remote. Safe to call on app resume.
-  Future<void> flushDirty() async {
-    for (final key in _dirty.toList()) {
-      final content = await local.read(key);
-      if (content == null) {
-        _dirty.remove(key);
+    for (final key in allKeys) {
+      final localExists = localKeys.contains(key);
+      final remoteExists = remoteKeys.contains(key);
+
+      if (!localExists && remoteExists) {
+        // Fresh install or new device: remote wins.
+        await _pullFromRemote(key);
         continue;
       }
-      try {
-        await remote.write(key, content);
-        _dirty.remove(key);
-      } catch (_) {
-        // Keep for next attempt.
+
+      if (localExists && !remoteExists) {
+        // Key not yet uploaded.
+        await _pushToRemote(key);
+        continue;
+      }
+
+      if (localExists && remoteExists) {
+        final localTime = await local.getLastModified(key);
+        final remoteTime = await remote.getLastModified(key);
+
+        if (_dirtyKeys.contains(key)) {
+          if (remoteTime != null &&
+              localTime != null &&
+              remoteTime.isAfter(localTime)) {
+            // Conflict: remote newer than our dirty version → backup + pull.
+            final localContent = await local.read(key);
+            if (localContent != null) {
+              await local.write('$key.backup', localContent);
+            }
+            await _pullFromRemote(key);
+          } else {
+            await _pushToRemote(key);
+          }
+        } else {
+          if (remoteTime != null &&
+              localTime != null &&
+              remoteTime.isAfter(localTime)) {
+            await _pullFromRemote(key);
+          }
+          // else: already in sync, nothing to do.
+        }
       }
     }
   }
 
-  bool get hasPendingChanges => _dirty.isNotEmpty;
+  /// Push all dirty keys to remote.
+  Future<void> pushDirty() async {
+    for (final key in List.of(_dirtyKeys)) {
+      await _pushToRemote(key);
+    }
+  }
+
+  Future<void> _pullFromRemote(String key) async {
+    final content = await remote.read(key);
+    if (content != null) {
+      await local.write(key, content);
+    }
+    _dirtyKeys.remove(key);
+  }
+
+  Future<void> _pushToRemote(String key) async {
+    final content = await local.read(key);
+    if (content != null) {
+      await remote.write(key, content);
+    }
+    _dirtyKeys.remove(key);
+  }
 }

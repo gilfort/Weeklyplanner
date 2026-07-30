@@ -6,7 +6,7 @@ part of 'general_items_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$generalItemsHash() => r'9ff05f10e3e5a0d946479ea0858de1e628f34995';
+String _$generalItemsHash() => r'446c4ac3f8bd2eb50a75d37fb6eedbd0f6bb3238';
 
 /// See also [GeneralItems].
 @ProviderFor(GeneralItems)

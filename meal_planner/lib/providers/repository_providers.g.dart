@@ -6,58 +6,73 @@ part of 'repository_providers.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$storageBackendHash() => r'67ae6e66a13d5bb020003b689edb1e142f0c1211';
+String _$webdavCredentialsServiceHash() =>
+    r'cb7cf33b88d90b00e69af3849722ec28711919fa';
 
-/// Builds the [StorageBackend] appropriate to the platform + user config.
-///
-/// Selection order:
-///   - Web            → [WebStorageBackend]
-///   - Drive mode ✓   → [CachedSyncStorageBackend] (local cache + Drive)
-///   - Local mode     → [FileStorageBackend] (custom path optional)
-///
-/// If Drive mode is selected but the user has not yet signed in or picked
-/// a folder, we fall back to the local file backend so the app stays usable;
-/// the Settings screen prompts the user to finish setup.
+/// See also [webdavCredentialsService].
+@ProviderFor(webdavCredentialsService)
+final webdavCredentialsServiceProvider =
+    AutoDisposeProvider<WebDavCredentialsService>.internal(
+      webdavCredentialsService,
+      name: r'webdavCredentialsServiceProvider',
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$webdavCredentialsServiceHash,
+      dependencies: null,
+      allTransitiveDependencies: null,
+    );
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+typedef WebdavCredentialsServiceRef =
+    AutoDisposeProviderRef<WebDavCredentialsService>;
+String _$storageBackendHash() => r'adb128236fad5c747104935dffcc5f82a4f233fb';
+
+/// Creates the correct [StorageBackend] based on the current platform and
+/// user-configured [StorageConfig]. Async because the WebDAV branch needs
+/// to read the password from secure storage.
 ///
 /// Copied from [storageBackend].
 @ProviderFor(storageBackend)
-final storageBackendProvider = AutoDisposeProvider<StorageBackend>.internal(
-  storageBackend,
-  name: r'storageBackendProvider',
-  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
-      ? null
-      : _$storageBackendHash,
-  dependencies: null,
-  allTransitiveDependencies: null,
-);
+final storageBackendProvider =
+    AutoDisposeFutureProvider<StorageBackend>.internal(
+      storageBackend,
+      name: r'storageBackendProvider',
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$storageBackendHash,
+      dependencies: null,
+      allTransitiveDependencies: null,
+    );
 
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
-typedef StorageBackendRef = AutoDisposeProviderRef<StorageBackend>;
-String _$recipeRepositoryHash() => r'd2f112ef6cf0562e00e9bfd436e80510f0d38dc6';
+typedef StorageBackendRef = AutoDisposeFutureProviderRef<StorageBackend>;
+String _$recipeRepositoryHash() => r'bfb995fe6de3a712a8ea2955785b07d6f126fcb5';
 
 /// See also [recipeRepository].
 @ProviderFor(recipeRepository)
-final recipeRepositoryProvider = AutoDisposeProvider<RecipeRepository>.internal(
-  recipeRepository,
-  name: r'recipeRepositoryProvider',
-  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
-      ? null
-      : _$recipeRepositoryHash,
-  dependencies: null,
-  allTransitiveDependencies: null,
-);
+final recipeRepositoryProvider =
+    AutoDisposeFutureProvider<RecipeRepository>.internal(
+      recipeRepository,
+      name: r'recipeRepositoryProvider',
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$recipeRepositoryHash,
+      dependencies: null,
+      allTransitiveDependencies: null,
+    );
 
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
-typedef RecipeRepositoryRef = AutoDisposeProviderRef<RecipeRepository>;
+typedef RecipeRepositoryRef = AutoDisposeFutureProviderRef<RecipeRepository>;
 String _$weekPlanRepositoryHash() =>
-    r'9661098733c5586a2f2d77e40515abfbae6408e6';
+    r'7d870648b0dc1b4d0d2ea5b282b496c76dd6f24f';
 
 /// See also [weekPlanRepository].
 @ProviderFor(weekPlanRepository)
 final weekPlanRepositoryProvider =
-    AutoDisposeProvider<WeekPlanRepository>.internal(
+    AutoDisposeFutureProvider<WeekPlanRepository>.internal(
       weekPlanRepository,
       name: r'weekPlanRepositoryProvider',
       debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
@@ -69,14 +84,15 @@ final weekPlanRepositoryProvider =
 
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
-typedef WeekPlanRepositoryRef = AutoDisposeProviderRef<WeekPlanRepository>;
+typedef WeekPlanRepositoryRef =
+    AutoDisposeFutureProviderRef<WeekPlanRepository>;
 String _$generalItemRepositoryHash() =>
-    r'abce0e370514b767e34d83edc110bc399d4e40eb';
+    r'26d6a227b4fc6157104de53d065b3b99cb53fc30';
 
 /// See also [generalItemRepository].
 @ProviderFor(generalItemRepository)
 final generalItemRepositoryProvider =
-    AutoDisposeProvider<GeneralItemRepository>.internal(
+    AutoDisposeFutureProvider<GeneralItemRepository>.internal(
       generalItemRepository,
       name: r'generalItemRepositoryProvider',
       debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
@@ -89,14 +105,14 @@ final generalItemRepositoryProvider =
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef GeneralItemRepositoryRef =
-    AutoDisposeProviderRef<GeneralItemRepository>;
+    AutoDisposeFutureProviderRef<GeneralItemRepository>;
 String _$ingredientCatalogRepositoryHash() =>
-    r'968ebcb094ffe23a0bf1295ff5c64c32d64e5912';
+    r'3adfbf3e94e81c4ec08ab91e46e6f3eb8b9aec54';
 
 /// See also [ingredientCatalogRepository].
 @ProviderFor(ingredientCatalogRepository)
 final ingredientCatalogRepositoryProvider =
-    AutoDisposeProvider<IngredientCatalogRepository>.internal(
+    AutoDisposeFutureProvider<IngredientCatalogRepository>.internal(
       ingredientCatalogRepository,
       name: r'ingredientCatalogRepositoryProvider',
       debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
@@ -109,23 +125,24 @@ final ingredientCatalogRepositoryProvider =
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef IngredientCatalogRepositoryRef =
-    AutoDisposeProviderRef<IngredientCatalogRepository>;
-String _$unitRepositoryHash() => r'b745e487d1a184b5ff2a02b6b67ebde8d1751cd8';
+    AutoDisposeFutureProviderRef<IngredientCatalogRepository>;
+String _$unitRepositoryHash() => r'edc95f0f673b128d8e42359a283b72233f30cd4f';
 
 /// See also [unitRepository].
 @ProviderFor(unitRepository)
-final unitRepositoryProvider = AutoDisposeProvider<UnitRepository>.internal(
-  unitRepository,
-  name: r'unitRepositoryProvider',
-  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
-      ? null
-      : _$unitRepositoryHash,
-  dependencies: null,
-  allTransitiveDependencies: null,
-);
+final unitRepositoryProvider =
+    AutoDisposeFutureProvider<UnitRepository>.internal(
+      unitRepository,
+      name: r'unitRepositoryProvider',
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$unitRepositoryHash,
+      dependencies: null,
+      allTransitiveDependencies: null,
+    );
 
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
-typedef UnitRepositoryRef = AutoDisposeProviderRef<UnitRepository>;
+typedef UnitRepositoryRef = AutoDisposeFutureProviderRef<UnitRepository>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package
