@@ -24,6 +24,7 @@ android {
         applicationId = "com.example.meal_planner"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
+        // minSdk = 23 required by Credential Manager (google_sign_in v7).
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode

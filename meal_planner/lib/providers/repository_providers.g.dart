@@ -6,11 +6,18 @@ part of 'repository_providers.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$storageBackendHash() => r'2650e5c9308ca38e51fdd983f6565dac89ea008f';
+String _$storageBackendHash() => r'67ae6e66a13d5bb020003b689edb1e142f0c1211';
 
-/// Creates the correct [StorageBackend] based on the current platform.
-/// On native platforms, watches [storagePathProvider] so that when the user
-/// changes the storage directory in Settings, all repositories rebuild.
+/// Builds the [StorageBackend] appropriate to the platform + user config.
+///
+/// Selection order:
+///   - Web            → [WebStorageBackend]
+///   - Drive mode ✓   → [CachedSyncStorageBackend] (local cache + Drive)
+///   - Local mode     → [FileStorageBackend] (custom path optional)
+///
+/// If Drive mode is selected but the user has not yet signed in or picked
+/// a folder, we fall back to the local file backend so the app stays usable;
+/// the Settings screen prompts the user to finish setup.
 ///
 /// Copied from [storageBackend].
 @ProviderFor(storageBackend)
@@ -83,26 +90,6 @@ final generalItemRepositoryProvider =
 // ignore: unused_element
 typedef GeneralItemRepositoryRef =
     AutoDisposeProviderRef<GeneralItemRepository>;
-String _$shoppingStateRepositoryHash() =>
-    r'0e9aeee3c9fdb444ca63f60a843486ec50c12aa1';
-
-/// See also [shoppingStateRepository].
-@ProviderFor(shoppingStateRepository)
-final shoppingStateRepositoryProvider =
-    AutoDisposeProvider<ShoppingStateRepository>.internal(
-      shoppingStateRepository,
-      name: r'shoppingStateRepositoryProvider',
-      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
-          ? null
-          : _$shoppingStateRepositoryHash,
-      dependencies: null,
-      allTransitiveDependencies: null,
-    );
-
-@Deprecated('Will be removed in 3.0. Use Ref instead')
-// ignore: unused_element
-typedef ShoppingStateRepositoryRef =
-    AutoDisposeProviderRef<ShoppingStateRepository>;
 String _$ingredientCatalogRepositoryHash() =>
     r'968ebcb094ffe23a0bf1295ff5c64c32d64e5912';
 

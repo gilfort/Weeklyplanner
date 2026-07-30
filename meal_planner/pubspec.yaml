@@ -44,6 +44,9 @@ dependencies:
   permission_handler: ^11.3.1
   file_picker: ^8.1.6
   google_fonts: ^8.0.2
+  google_sign_in: ^7.1.0
+  googleapis: ^13.2.0
+  http: ^1.2.2
 
 dev_dependencies:
   flutter_test:
