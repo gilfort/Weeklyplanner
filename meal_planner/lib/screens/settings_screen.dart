@@ -52,7 +52,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ),
         actions: const [SyncStatusIcon()],
       ),
-      body: RuledPaperBackground(
+      body: PaperBackground(
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [

@@ -8,8 +8,8 @@ class PaperTheme {
   // ── Colours ──────────────────────────────────────────────────────────
   static const Color ink = Color(0xFF1A3A5C); // dark blue ink
   static const Color inkLight = Color(0xFF4A7DAD); // lighter accent
-  static const Color paper = Color(0xFFEAF4FF); // light blue-white
-  static const Color paperDark = Color(0xFFD6EAFF); // slightly darker blue
+  static const Color paper = Color(0xFFFAF7F0); // warm paper white
+  static const Color paperDark = Color(0xFFF0EBE0); // slightly darker paper
   static const Color ruled = Color(0xFFCDD8E4); // blue ruled lines
   static const Color ruledLight = Color(0xFFDDE6EF);
   static const Color margin = Color(0xFFE8A0A0); // red margin line
@@ -190,32 +190,13 @@ class PaperTheme {
 }
 
 /// A widget that paints a light-blue to white gradient background.
-class RuledPaperBackground extends StatelessWidget {
+class PaperBackground extends StatelessWidget {
   final Widget child;
-  final double lineSpacing;
-  final bool showMargin;
 
-  const RuledPaperBackground({
-    super.key,
-    required this.child,
-    this.lineSpacing = 32,
-    this.showMargin = false,
-  });
+  const PaperBackground({super.key, required this.child});
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Color(0xFFD6EAFF), // light blue
-            Color(0xFFFFFFFF), // white
-          ],
-        ),
-      ),
-      child: child,
-    );
+    return ColoredBox(color: PaperTheme.paper, child: child);
   }
 }

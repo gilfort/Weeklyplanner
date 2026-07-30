@@ -95,8 +95,7 @@ class RecipeListScreen extends ConsumerWidget {
               ),
             );
           }
-          return RuledPaperBackground(
-            showMargin: true,
+          return PaperBackground(
             child: ListView.builder(
               padding: const EdgeInsets.only(bottom: 80),
               itemCount: recipes.length,

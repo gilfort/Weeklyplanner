@@ -61,7 +61,7 @@ class WeekPlanScreen extends ConsumerWidget {
           message: 'Wochenplan konnte nicht geladen werden.',
           onRetry: () => ref.invalidate(weekPlanNotifierProvider(weekKey)),
         ),
-        data: (weekPlan) => RuledPaperBackground(
+        data: (weekPlan) => PaperBackground(
           child: _WeekList(weekPlan: weekPlan, weekKey: weekKey),
         ),
       ),

@@ -35,8 +35,7 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: RuledPaperBackground(
-        showMargin: true,
+      body: PaperBackground(
         child: SafeArea(
           child: Center(
             child: SingleChildScrollView(

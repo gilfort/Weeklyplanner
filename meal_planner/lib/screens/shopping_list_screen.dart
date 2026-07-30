@@ -135,8 +135,7 @@ class _WeeklyShoppingTab extends ConsumerWidget {
           children: [
             const _QuickAddField(),
             Expanded(
-              child: RuledPaperBackground(
-                showMargin: true,
+              child: PaperBackground(
                 child: ListView(
                   padding: const EdgeInsets.only(bottom: 80),
                   children: [
@@ -571,8 +570,7 @@ class _GeneralItemsTab extends ConsumerWidget {
                         ),
                       ),
                     )
-                  : RuledPaperBackground(
-                      showMargin: true,
+                  : PaperBackground(
                       child: ListView.builder(
                         padding: const EdgeInsets.only(bottom: 80),
                         itemCount: items.length,
