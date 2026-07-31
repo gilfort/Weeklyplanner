@@ -34,7 +34,7 @@ class SyncStatusIcon extends ConsumerWidget {
           tooltip: detail.errorMessage ?? 'Sync-Fehler',
           onPressed: () async {
             final service = await ref.read(syncServiceProvider.future);
-            service?.syncAll();
+            service?.syncNow();
             if (!context.mounted) return;
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -43,7 +43,7 @@ class SyncStatusIcon extends ConsumerWidget {
                   label: 'Erneut versuchen',
                   onPressed: () async {
                     final s = await ref.read(syncServiceProvider.future);
-                    s?.syncAll();
+                    s?.syncNow();
                   },
                 ),
               ),

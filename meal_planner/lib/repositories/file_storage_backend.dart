@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+import '../sync/base_snapshot_store.dart';
 import 'storage_backend.dart';
 
 /// Storage backend that persists data as files in the app documents directory.
@@ -63,6 +64,9 @@ class FileStorageBackend extends SyncableStorageBackend {
   }
 
   /// Lists all .json keys below the root as `dir/name.json` paths.
+  ///
+  /// Skips the base-snapshot mirror: it records what *this* device last
+  /// agreed with the sync target and would be nonsense on another device.
   @override
   Future<List<String>> listKeys() async {
     final dir = await _root();
@@ -71,6 +75,7 @@ class FileStorageBackend extends SyncableStorageBackend {
         .listSync(recursive: true)
         .whereType<File>()
         .map((f) => p.posix.joinAll(p.split(p.relative(f.path, from: dir.path))))
+        .where((key) => !key.startsWith('${BaseSnapshotStore.dirName}/'))
         .where((key) => _isDataFile(p.posix.basename(key)))
         .toList();
   }

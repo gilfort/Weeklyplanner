@@ -1,4 +1,5 @@
 import '../models/ingredient_catalog_entry.dart';
+import '../sync/entity_merge.dart';
 import 'entity_repository.dart';
 
 class IngredientCatalogRepository
@@ -28,6 +29,15 @@ class IngredientCatalogRepository
     DateTime at,
   ) =>
       item.copyWith(deleted: true, deletedAt: at);
+
+  @override
+  IngredientCatalogEntry merge(
+    IngredientCatalogEntry base,
+    IngredientCatalogEntry local,
+    IngredientCatalogEntry remote, {
+    required bool preferRemote,
+  }) =>
+      mergeCatalogEntry(base, local, remote, preferRemote: preferRemote);
 
   Future<void> upsertEntry(IngredientCatalogEntry entry) => upsert(entry);
 

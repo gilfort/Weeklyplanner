@@ -26,11 +26,32 @@ final webdavCredentialsServiceProvider =
 // ignore: unused_element
 typedef WebdavCredentialsServiceRef =
     AutoDisposeProviderRef<WebDavCredentialsService>;
-String _$storageBackendHash() => r'adb128236fad5c747104935dffcc5f82a4f233fb';
+String _$syncTriggerHash() => r'e5a2721800cdfd261d079c4f7f915be223dcf88c';
+
+/// See also [syncTrigger].
+@ProviderFor(syncTrigger)
+final syncTriggerProvider = Provider<SyncTrigger>.internal(
+  syncTrigger,
+  name: r'syncTriggerProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$syncTriggerHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+typedef SyncTriggerRef = ProviderRef<SyncTrigger>;
+String _$storageBackendHash() => r'bffd2dbd103eda2f9e2806201a3576ee17752707';
 
 /// Creates the correct [StorageBackend] based on the current platform and
 /// user-configured [StorageConfig]. Async because the WebDAV branch needs
 /// to read the password from secure storage.
+///
+/// App data always lives in private storage; a sync target is reconciled on
+/// top of it. The folder case is already on the new engine — SAF and WebDAV
+/// still ride the old cached backend until phases 4 and 5 replace them.
 ///
 /// Copied from [storageBackend].
 @ProviderFor(storageBackend)
@@ -48,6 +69,25 @@ final storageBackendProvider =
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef StorageBackendRef = AutoDisposeFutureProviderRef<StorageBackend>;
+String _$syncEngineHash() => r'f0414960cb9baf74b6b7980e95c2f5b76f29b85f';
+
+/// The engine for the folder target, or null when no folder is configured.
+///
+/// Copied from [syncEngine].
+@ProviderFor(syncEngine)
+final syncEngineProvider = AutoDisposeFutureProvider<SyncEngine?>.internal(
+  syncEngine,
+  name: r'syncEngineProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$syncEngineHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+typedef SyncEngineRef = AutoDisposeFutureProviderRef<SyncEngine?>;
 String _$recipeRepositoryHash() => r'bfb995fe6de3a712a8ea2955785b07d6f126fcb5';
 
 /// See also [recipeRepository].

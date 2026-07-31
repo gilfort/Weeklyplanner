@@ -48,18 +48,9 @@ class _MealPlannerAppState extends ConsumerState<MealPlannerApp>
     final service = ref.read(syncServiceProvider).valueOrNull;
     if (service == null) return;
 
-    switch (state) {
-      case AppLifecycleState.resumed:
-        // App came to foreground: sync immediately + restart timer.
-        service.syncAll();
-        service.startPeriodicSync();
-      case AppLifecycleState.paused:
-      case AppLifecycleState.inactive:
-      case AppLifecycleState.detached:
-        service.stopPeriodicSync();
-      case AppLifecycleState.hidden:
-        break;
-    }
+    // Foreground-only sync: coming back is the moment the other device's
+    // changes matter, and the moment ours should go out.
+    if (state == AppLifecycleState.resumed) service.syncNow();
   }
 
   @override

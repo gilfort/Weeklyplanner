@@ -1,4 +1,5 @@
 import '../models/general_item.dart';
+import '../sync/entity_merge.dart';
 import 'entity_repository.dart';
 
 class GeneralItemRepository extends EntityRepository<GeneralItem> {
@@ -23,6 +24,11 @@ class GeneralItemRepository extends EntityRepository<GeneralItem> {
   @override
   GeneralItem markDeleted(GeneralItem item, DateTime at) =>
       item.copyWith(deleted: true, deletedAt: at);
+
+  @override
+  GeneralItem merge(GeneralItem base, GeneralItem local, GeneralItem remote,
+          {required bool preferRemote}) =>
+      mergeGeneralItem(base, local, remote, preferRemote: preferRemote);
 
   Future<void> upsertItem(GeneralItem item) => upsert(item);
 

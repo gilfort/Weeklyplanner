@@ -1,4 +1,5 @@
 import '../models/recipe.dart';
+import '../sync/entity_merge.dart';
 import 'entity_repository.dart';
 
 class RecipeRepository extends EntityRepository<Recipe> {
@@ -22,6 +23,11 @@ class RecipeRepository extends EntityRepository<Recipe> {
   @override
   Recipe markDeleted(Recipe item, DateTime at) =>
       item.copyWith(deleted: true, deletedAt: at);
+
+  @override
+  Recipe merge(Recipe base, Recipe local, Recipe remote,
+          {required bool preferRemote}) =>
+      mergeRecipe(base, local, remote, preferRemote: preferRemote);
 
   Future<void> upsertRecipe(Recipe recipe) => upsert(recipe);
 

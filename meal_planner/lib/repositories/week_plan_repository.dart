@@ -1,4 +1,5 @@
 import '../models/week_plan.dart';
+import '../sync/entity_merge.dart';
 import 'entity_repository.dart';
 
 class WeekPlanRepository extends EntityRepository<WeekPlan> {
@@ -22,6 +23,11 @@ class WeekPlanRepository extends EntityRepository<WeekPlan> {
   @override
   WeekPlan markDeleted(WeekPlan item, DateTime at) =>
       item.copyWith(deleted: true, deletedAt: at);
+
+  @override
+  WeekPlan merge(WeekPlan base, WeekPlan local, WeekPlan remote,
+          {required bool preferRemote}) =>
+      mergeWeekPlan(base, local, remote, preferRemote: preferRemote);
 
   Future<void> upsertWeekPlan(WeekPlan plan) => upsert(plan);
 

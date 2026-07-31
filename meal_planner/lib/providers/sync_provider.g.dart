@@ -6,11 +6,10 @@ part of 'sync_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$syncServiceHash() => r'aab0d6ff941082400210569168067c4fe5b9d4c3';
+String _$syncServiceHash() => r'38a364b222b424fc8b31182136c745be76d9085a';
 
-/// Creates and manages the [SyncService] when a [CachedSyncStorageBackend] is
-/// active. Returns null for local/filesystem backends. Async because the
-/// underlying storageBackendProvider is async (WebDAV credentials lookup).
+/// Creates and manages the [SyncService] for whichever target is configured.
+/// Returns null when there is nothing to sync with (local-only storage).
 ///
 /// Copied from [syncService].
 @ProviderFor(syncService)
@@ -27,7 +26,7 @@ final syncServiceProvider = FutureProvider<SyncService?>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef SyncServiceRef = FutureProviderRef<SyncService?>;
-String _$syncStatusHash() => r'f7555df2192685e681e5eecaed71cb6d9b170dbe';
+String _$syncStatusHash() => r'8903b48d7b883f7f27b5df27a0e79778c3380b3b';
 
 /// Exposes sync status as a stream for UI consumption.
 ///

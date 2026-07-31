@@ -32,6 +32,10 @@ abstract class EntityRepository<T> {
   /// Returns a copy of [item] marked as deleted at [at].
   T markDeleted(T item, DateTime at);
 
+  /// Three-way merge used by the sync engine. [preferRemote] only decides
+  /// fields both sides changed to different values.
+  T merge(T base, T local, T remote, {required bool preferRemote});
+
   /// Ids are UUIDs or week keys — anything else would leak user text into
   /// file paths and break on the stricter sync targets.
   static final _safeId = RegExp(r'^[A-Za-z0-9._-]+$');
@@ -50,7 +54,7 @@ abstract class EntityRepository<T> {
     final items = <T>[];
     for (final name in names) {
       final content = await storage.read('$dirName/$name');
-      final item = _decode(content);
+      final item = decode(content);
       if (item == null) continue;
       if (!includeDeleted && isDeleted(item)) continue;
       items.add(item);
@@ -59,7 +63,7 @@ abstract class EntityRepository<T> {
   }
 
   Future<T?> findById(String id, {bool includeDeleted = false}) async {
-    final item = _decode(await storage.read(pathFor(id)));
+    final item = decode(await storage.read(pathFor(id)));
     if (item == null) return null;
     if (!includeDeleted && isDeleted(item)) return null;
     return item;
@@ -68,7 +72,7 @@ abstract class EntityRepository<T> {
   /// Insert or overwrite [item]'s file.
   Future<void> upsert(T item) async {
     try {
-      await storage.write(pathFor(idOf(item)), _encode(item));
+      await storage.write(pathFor(idOf(item)), encode(item));
     } on IOException catch (e) {
       throw StorageException('Datei konnte nicht geschrieben werden: $e');
     }
@@ -101,12 +105,16 @@ abstract class EntityRepository<T> {
     return removed;
   }
 
-  String _encode(T item) => jsonEncode({
+  /// Wraps [item] in the versioned envelope written to disk and to the sync
+  /// target. Public because the sync engine moves encoded files around.
+  String encode(T item) => jsonEncode({
         'schemaVersion': kSchemaVersion,
         'data': toJson(item),
       });
 
-  T? _decode(String? content) {
+  /// Reverse of [encode]. Returns null for missing, empty, corrupt or
+  /// foreign-version content.
+  T? decode(String? content) {
     if (content == null || content.trim().isEmpty) return null;
     try {
       final envelope = jsonDecode(content) as Map<String, dynamic>;
